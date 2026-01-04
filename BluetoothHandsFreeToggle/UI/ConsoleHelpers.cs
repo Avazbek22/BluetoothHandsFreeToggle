@@ -7,7 +7,8 @@ public static class ConsoleHelpers
         WithColor(ConsoleColor.Cyan, () =>
         {
             Console.WriteLine(text);
-            Console.WriteLine(new string('=', Math.Max(10, text.Length)));
+            Console.WriteLine("\r\nDeveloped by Avazbek22");
+            Console.WriteLine(new string('=', Math.Max(10, text.Length)) + "\r\n");
         });
     }
 
