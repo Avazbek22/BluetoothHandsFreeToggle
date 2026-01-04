@@ -8,15 +8,14 @@ public static class ConsoleTable
     {
         var rows = snapshots.Select(s => new[]
         {
-            s.ServiceName,
+            s.FriendlyName,
             s.Exists ? "Yes" : "No",
-            s.RunState.ToString(),
-            s.StartType.ToString(),
+            s.Exists ? s.RunState.ToString() : "-",
+            s.Exists ? s.StartType.ToString() : "-",
             s.RegistryStartValue?.ToString() ?? "-",
-            s.FriendlyName
         }).ToList();
 
-        var headers = new[] { "Service", "Exists", "State", "Startup", "RegStart", "Description" };
+        var headers = new[] { "Component", "Present", "State", "Startup", "RegStart" };
         PrintTable(headers, rows);
     }
 
@@ -37,8 +36,11 @@ public static class ConsoleTable
             return string.Join("  ", cols.Select((c, i) => (c ?? "").PadRight(widths[i])));
         }
 
-        Console.WriteLine(Line(headers));
-        Console.WriteLine(string.Join("  ", widths.Select(w => new string('-', w))));
+        ConsoleHelpers.WithColor(ConsoleColor.DarkCyan, () =>
+        {
+            Console.WriteLine(Line(headers));
+            Console.WriteLine(string.Join("  ", widths.Select(w => new string('-', w))));
+        });
 
         foreach (var r in rows)
             Console.WriteLine(Line(r));

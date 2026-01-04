@@ -4,14 +4,30 @@ public static class ConsoleHelpers
 {
     public static void WriteHeader(string text)
     {
-        Console.WriteLine(text);
-        Console.WriteLine(new string('=', Math.Max(10, text.Length)));
+        WithColor(ConsoleColor.Cyan, () =>
+        {
+            Console.WriteLine(text);
+            Console.WriteLine(new string('=', Math.Max(10, text.Length)));
+        });
+    }
+
+    public static void WriteSuccess(string text) => WithColor(ConsoleColor.Green, () => Console.WriteLine(text));
+    public static void WriteWarning(string text) => WithColor(ConsoleColor.Yellow, () => Console.WriteLine(text));
+    public static void WriteError(string text) => WithColor(ConsoleColor.Red, () => Console.WriteLine(text));
+    public static void WriteInfo(string text) => WithColor(ConsoleColor.Gray, () => Console.WriteLine(text));
+
+    public static void WithColor(ConsoleColor color, Action action)
+    {
+        var old = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        try { action(); }
+        finally { Console.ForegroundColor = old; }
     }
 
     public static void Pause(string message = "Press any key to continue...")
     {
         Console.WriteLine();
-        Console.WriteLine(message);
+        WithColor(ConsoleColor.DarkGray, () => Console.WriteLine(message));
         Console.ReadKey(true);
     }
 

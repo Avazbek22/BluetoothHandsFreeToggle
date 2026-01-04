@@ -11,93 +11,93 @@ public sealed class ToggleEngine
     public ToggleReport GetStatusReport()
     {
         var snaps = Targets.Services.Select(GetSnapshotSafe).ToList();
-        return ToggleReport.Ok("Status", snaps);
+        return ToggleReport.Ok("STATUS", snaps);
     }
 
     public ToggleReport DisableHandsFree(ToggleOptions options)
     {
-        var snapsBefore = Targets.Services.Select(GetSnapshotSafe).ToList();
-        _backup.Save(snapsBefore);
+        var before = Targets.Services.Select(GetSnapshotSafe).ToList();
+        _backup.Save(before);
 
-        var lines = new List<string>();
-        var snapsAfter = new List<ServiceSnapshot>();
+        var lines = new List<string>
+        {
+            "Disabling Hands-Free (HFP) components...",
+            options.ApplyRegistry
+                ? "Registry hard lock: ENABLED"
+                : "Registry hard lock: DISABLED (services only)"
+        };
 
-        lines.Add("Disabling Hands-Free (HFP) services...");
-        lines.Add(options.ApplyRegistry
-            ? "Registry hard lock: ENABLED"
-            : "Registry hard lock: DISABLED (services only)");
+        var after = new List<ServiceSnapshot>();
 
         foreach (var t in Targets.Services)
         {
-            var before = GetSnapshotSafe(t);
-            if (!before.Exists)
+            var snapBefore = GetSnapshotSafe(t);
+
+            if (!snapBefore.Exists)
             {
-                lines.Add($"- {t.ServiceName}: not present");
-                snapsAfter.Add(before);
+                lines.Add($"- {t.FriendlyName}: Not available on this system");
+                after.Add(snapBefore);
                 continue;
             }
 
-            // 1) Stop if running (best effort)
+            // Stop (best effort)
             var stopped = _svc.TryStopService(t.ServiceName, TimeSpan.FromSeconds(20), out var stopErr);
             if (!stopped && stopErr is not null)
-                lines.Add($"- {t.ServiceName}: stop -> {stopErr}");
+                lines.Add($"- {t.FriendlyName}: stop -> {stopErr}");
 
-            // 2) Set startup type to Disabled
+            // Disable startup type
             var stOk = _svc.TrySetStartType(t.ServiceName, ServiceStartType.Disabled, out var stErr);
             if (!stOk && stErr is not null)
-                lines.Add($"- {t.ServiceName}: set start type -> {stErr}");
+                lines.Add($"- {t.FriendlyName}: startup -> {stErr}");
 
-            // 3) Registry hard lock (optional)
+            // Registry lock (optional)
             if (options.ApplyRegistry)
             {
                 var rOk = _reg.TrySetRegistryStartValue(t.ServiceName, 4, out var rErr); // 4 = Disabled
                 if (!rOk && rErr is not null)
-                    lines.Add($"- {t.ServiceName}: registry lock -> {rErr}");
+                    lines.Add($"- {t.FriendlyName}: registry -> {rErr}");
             }
 
-            snapsAfter.Add(GetSnapshotSafe(t));
+            after.Add(GetSnapshotSafe(t));
         }
 
-        lines.Add("");
         lines.Add("Done.");
-        lines.Add("Tip: If an app still keeps old audio mode, close it and reconnect the headset. A reboot can help on stubborn systems.");
 
-        return ToggleReport.Ok("Disable complete", snapsAfter, lines);
+        return ToggleReport.Ok("SUCCESS - Disable complete", after, lines);
     }
 
     public ToggleReport EnableHandsFree(ToggleOptions options)
     {
-        var snapsBefore = Targets.Services.Select(GetSnapshotSafe).ToList();
-
-        // Load backup, if exists.
+        var before = Targets.Services.Select(GetSnapshotSafe).ToList();
         _backup.TryLoad(out var backup);
 
-        var lines = new List<string>();
-        var snapsAfter = new List<ServiceSnapshot>();
+        var lines = new List<string>
+        {
+            "Enabling Hands-Free (HFP) components...",
+            options.ApplyRegistry
+                ? "Registry restore: ENABLED (uses backup if available)"
+                : "Registry restore: SKIPPED"
+        };
 
-        lines.Add("Enabling Hands-Free (HFP) services...");
-        lines.Add(options.ApplyRegistry
-            ? "Registry restore: ENABLED (uses backup if available)"
-            : "Registry restore: SKIPPED");
+        var after = new List<ServiceSnapshot>();
 
         foreach (var t in Targets.Services)
         {
-            var before = GetSnapshotSafe(t);
-            if (!before.Exists)
+            var snapBefore = GetSnapshotSafe(t);
+
+            if (!snapBefore.Exists)
             {
-                lines.Add($"- {t.ServiceName}: not present");
-                snapsAfter.Add(before);
+                lines.Add($"- {t.FriendlyName}: Not available on this system");
+                after.Add(snapBefore);
                 continue;
             }
 
-            // Determine desired start type & registry Start.
-            // Safe default: Manual + Start=3
+            // Safe defaults: Manual + Start=3
             var desiredStartType = ServiceStartType.Manual;
             var desiredRegStart = 3;
 
             if (backup?.Services.TryGetValue(t.ServiceName, out var old) == true)
             {
-                // Restore only to safe values; if unknown, fall back to Manual.
                 desiredStartType = old.StartType switch
                 {
                     ServiceStartType.Auto => ServiceStartType.Auto,
@@ -113,38 +113,32 @@ public sealed class ToggleEngine
                 };
             }
 
-            // 1) Registry restore (optional)
             if (options.ApplyRegistry)
             {
                 var rOk = _reg.TrySetRegistryStartValue(t.ServiceName, desiredRegStart, out var rErr);
                 if (!rOk && rErr is not null)
-                    lines.Add($"- {t.ServiceName}: registry restore -> {rErr}");
+                    lines.Add($"- {t.FriendlyName}: registry -> {rErr}");
             }
 
-            // 2) Set startup type
             var stOk = _svc.TrySetStartType(t.ServiceName, desiredStartType, out var stErr);
             if (!stOk && stErr is not null)
-                lines.Add($"- {t.ServiceName}: set start type -> {stErr}");
+                lines.Add($"- {t.FriendlyName}: startup -> {stErr}");
 
-            // 3) Start (optional)
             if (options.StartServicesOnEnable)
             {
                 var started = _svc.TryStartService(t.ServiceName, TimeSpan.FromSeconds(20), out var startErr);
                 if (!started && startErr is not null)
-                    lines.Add($"- {t.ServiceName}: start -> {startErr}");
+                    lines.Add($"- {t.FriendlyName}: start -> {startErr}");
             }
 
-            snapsAfter.Add(GetSnapshotSafe(t));
+            after.Add(GetSnapshotSafe(t));
         }
 
-        lines.Add("");
         lines.Add("Done.");
-        lines.Add("Tip: Apps may need restart to detect the restored voice profile.");
 
-        // Save new backup snapshot as current baseline too (best effort)
-        _backup.Save(snapsAfter);
+        _backup.Save(after);
 
-        return ToggleReport.Ok("Enable complete", snapsAfter, lines);
+        return ToggleReport.Ok("SUCCESS - Enable complete", after, lines);
     }
 
     private ServiceSnapshot GetSnapshotSafe(TargetService t)
@@ -183,13 +177,16 @@ public sealed record ToggleReport(string Title, bool Success, List<ServiceSnapsh
         if (Snapshots.Count > 0)
         {
             output.Add("");
-            output.Add("Services:");
+            output.Add("Components:");
             foreach (var s in Snapshots)
             {
                 var exists = s.Exists ? "Yes" : "No";
                 var reg = s.RegistryStartValue.HasValue ? s.RegistryStartValue.Value.ToString() : "-";
                 var note = string.IsNullOrWhiteSpace(s.Note) ? "" : $" ({s.Note})";
-                output.Add($"- {s.ServiceName} | Exists={exists} | State={s.RunState} | Startup={s.StartType} | RegStart={reg}{note}");
+
+                // Keep technical ID only as a hint, not the main focus
+                var tech = s.Exists ? $" [TechId: {s.ServiceName}]" : "";
+                output.Add($"- {s.FriendlyName}: Exists={exists} | State={s.RunState} | Startup={s.StartType} | RegStart={reg}{tech}{note}");
             }
         }
 
