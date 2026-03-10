@@ -1,5 +1,11 @@
 # BluetoothHandsFreeToggle
 
+![Downloads](https://img.shields.io/github/downloads/Avazbek22/BluetoothHandsFreeToggle/total)
+![License](https://img.shields.io/github/license/Avazbek22/BluetoothHandsFreeToggle)
+![.NET](https://img.shields.io/badge/.NET-10-purple)
+![Platform](https://img.shields.io/badge/platform-Windows-green)
+![Repo size](https://img.shields.io/github/repo-size/Avazbek22/BluetoothHandsFreeToggle)
+
 BluetoothHandsFreeToggle is a small Windows utility that manages the **Bluetooth Hands-Free (HFP / Headset)** audio path at the operating system level.
 
 The tool is designed for scenarios where Windows applications (most commonly games or communication-enabled apps) implicitly activate the Hands-Free profile, forcing Bluetooth headphones into low-quality call audio instead of stereo (**A2DP**).
