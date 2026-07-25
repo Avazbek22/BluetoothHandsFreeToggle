@@ -12,7 +12,7 @@ try
     var startupLanguage = AppLanguageResolver.ResolveStartupLanguage(languagePreferenceStore);
     Text.Initialize(new LocalizationService(languagePreferenceStore, startupLanguage));
 
-    Console.Title = AppInfo.AppName;
+    Console.Title = AppInfo.AppDisplayName;
 
     var appInfo = AppInfo.Create();
 

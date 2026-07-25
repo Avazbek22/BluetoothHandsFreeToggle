@@ -97,7 +97,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
 
     private void RenderHeader()
     {
-        ConsoleHelpers.WriteHeader(AppInfo.AppName);
+        ConsoleHelpers.WriteHeader(AppInfo.AppDisplayName);
         Console.WriteLine($"{Text.Get("header.version")}: {appInfo.Version}");
         Console.WriteLine($"{Text.Get("header.os")}: {appInfo.OsDisplayName}");
         Console.WriteLine($"{Text.Get("header.runtime")}: {appInfo.FrameworkDescription}");
@@ -186,7 +186,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
         DocumentationDocument document)
     {
         ConsoleHelpers.TryClearScreen();
-        ConsoleHelpers.WriteHeader(AppInfo.AppName);
+        ConsoleHelpers.WriteHeader(AppInfo.AppDisplayName);
         ConsoleHelpers.WithColor(
             ConsoleColor.White,
             () => Console.WriteLine(title));

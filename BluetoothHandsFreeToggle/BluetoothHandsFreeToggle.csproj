@@ -12,6 +12,10 @@
         <AssemblyName>BluetoothHandsFreeToggle</AssemblyName>
         <RootNamespace>BluetoothHandsFreeToggle</RootNamespace>
         <Version>2.0.0</Version>
+        <AssemblyVersion>2.0.0.0</AssemblyVersion>
+        <FileVersion>2.0.0.0</FileVersion>
+        <InformationalVersion>2</InformationalVersion>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
         <Description>Soft reset and hard disable/restore modes for Windows Bluetooth Hands-Free services.</Description>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
