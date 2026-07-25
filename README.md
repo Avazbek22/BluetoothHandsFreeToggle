@@ -1,10 +1,15 @@
 # BluetoothHandsFreeToggle
 
+<p align="center">
+  <img src="BluetoothHandsFreeToggle/Assets/AppIcon.png" width="144" alt="BluetoothHandsFreeToggle logo">
+</p>
+
 ![Downloads](https://img.shields.io/github/downloads/Avazbek22/BluetoothHandsFreeToggle/total)
 ![License](https://img.shields.io/github/license/Avazbek22/BluetoothHandsFreeToggle)
 ![.NET](https://img.shields.io/badge/.NET-10-purple)
 ![Platform](https://img.shields.io/badge/platform-Windows-green)
 ![Repo size](https://img.shields.io/github/repo-size/Avazbek22/BluetoothHandsFreeToggle)
+[![Support on Boosty](https://img.shields.io/badge/Support-Boosty-F15F2C)](https://boosty.to/avazbek22)
 
 BluetoothHandsFreeToggle is a Windows utility for resetting or disabling the Bluetooth Classic Hands-Free Profile (HFP) when a headset becomes stuck in low-quality call audio instead of stereo A2DP playback.
 
@@ -144,6 +149,11 @@ dotnet publish BluetoothHandsFreeToggle/BluetoothHandsFreeToggle.csproj `
   -p:PublishProfile=win-x64
 ```
 
+## Support the project
+
+BluetoothHandsFreeToggle is free and open source. If the utility helped you,
+you can support its continued development on [Boosty](https://boosty.to/avazbek22).
+
 ## License
 
 [MIT](LICENSE) © 2026 Avazbek Olimov
@@ -157,5 +167,6 @@ BluetoothHandsFreeToggle помогает вернуть нормальное к
 - **Restore** возвращает сохранённые настройки и исходное состояние служб.
 - Язык определяется по настройкам Windows и переключается пунктом `[7]`; выбор сохраняется между запусками.
 - Встроенная справка `[5]` объясняет режимы, ограничения Bluetooth Classic и порядок восстановления.
+- Поддержать дальнейшую разработку можно на [Boosty](https://boosty.to/avazbek22).
 
 Важно: при активном Bluetooth Classic микрофоне одновременно сохранить A2DP-качество технически невозможно. Soft mode предназначен для сброса ошибочно «залипшего» HFP, а Hard mode — для гарантированного исключения HFP.

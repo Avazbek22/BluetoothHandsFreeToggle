@@ -4,6 +4,7 @@
 **/publish/
 TestResults/
 artifacts/
+tmp/
 
 # IDEs
 .idea/
