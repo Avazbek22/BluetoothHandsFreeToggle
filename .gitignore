@@ -1,0 +1,23 @@
+# Build output
+**/bin/
+**/obj/
+**/publish/
+TestResults/
+artifacts/
+
+# IDEs
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test and coverage output
+coverage/
+coverage.*
+*.trx
+
+# OS files
+.DS_Store
+Thumbs.db

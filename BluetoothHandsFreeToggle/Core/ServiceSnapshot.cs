@@ -1,4 +1,4 @@
-﻿namespace BluetoothHandsFreeToggle.Core;
+namespace BluetoothHandsFreeToggle.Core;
 
 public enum ServiceRunState
 {
@@ -8,6 +8,8 @@ public enum ServiceRunState
     StartPending,
     StopPending,
     Paused,
+    PausePending,
+    ContinuePending,
     Unknown
 }
 
@@ -24,7 +26,8 @@ public sealed record ServiceSnapshot(
     string ServiceName,
     string FriendlyName,
     bool Exists,
+    bool QuerySucceeded,
     ServiceRunState RunState,
     ServiceStartType StartType,
-    int? RegistryStartValue,
+    int? NativeStartValue,
     string? Note);

@@ -1,54 +1,63 @@
-﻿using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Core;
 
 namespace BluetoothHandsFreeToggle.App;
 
-public sealed class CommandLine
+public sealed class CommandLine(string[] arguments)
 {
-    private readonly string[] _args;
-
-    public CommandLine(string[] args) => _args = args;
+    private static readonly TimeSpan ElevatedOperationTimeout = TimeSpan.FromSeconds(90);
+    private readonly string[] _arguments = arguments;
 
     public bool TryHandleNonInteractive(AppInfo appInfo)
     {
-        // Supported:
-        //  status
-        //  disable
-        //  enable
-        //
-        // Internal elevated child mode:
-        //  --elevated --action disable|enable --pipe <name> [--no-registry] [--no-start]
-        //
-        if (_args.Length == 0)
+        if (_arguments.Length == 0)
             return false;
 
-        var args = _args.Select(a => a.Trim()).Where(a => a.Length > 0).ToArray();
+        var args = _arguments.Where(argument => !string.IsNullOrWhiteSpace(argument)).ToArray();
+        if (args.Length == 0)
+            return false;
 
-        if (args.Contains("--elevated", StringComparer.OrdinalIgnoreCase))
-        {
+        if (args[0].Equals("--elevated", StringComparison.OrdinalIgnoreCase))
             return HandleElevatedChild(appInfo, args);
-        }
 
-        var cmd = args[0].ToLowerInvariant();
-        if (cmd is not ("status" or "disable" or "enable"))
-            return false;
-
-        var options = ToggleOptions.FromArgs(args.Skip(1).ToArray());
-
-        var engine = new ToggleEngine();
-
-        if (cmd == "status")
+        if (args.Length != 1)
         {
-            var report = engine.GetStatusReport();
-            Console.WriteLine(report.ToPrettyText());
+            WriteUsageError("Commands do not accept additional arguments.");
             return true;
         }
 
-        // disable/enable from CLI:
-        // if not admin -> elevate and wait (non-interactive)
+        var command = args[0].ToLowerInvariant();
+        if (command is "help" or "--help" or "-h" or "/?")
+        {
+            WriteHelp();
+            return true;
+        }
+
+        if (command is not ("status" or "soft" or "hard" or "restore" or "disable" or "enable"))
+        {
+            WriteUsageError($"Unknown command: {args[0]}");
+            return true;
+        }
+
+        var normalizedAction = command switch
+        {
+            "disable" => "hard",
+            "enable" => "restore",
+            _ => command
+        };
+
+        var engine = new ToggleEngine();
+        if (normalizedAction == "status")
+        {
+            PrintReport(engine.GetStatusReport());
+            return true;
+        }
+
         if (!appInfo.IsAdministrator)
         {
-            var elevatedArgs = BuildElevatedArgs(cmd, options);
-            var result = ElevationIpc.RunElevatedAndWait(appInfo.ExePath, elevatedArgs, TimeSpan.FromSeconds(60));
+            var result = ElevationIpc.RunElevatedAndWait(
+                appInfo.ExePath,
+                ["--elevated", "--action", normalizedAction],
+                ElevatedOperationTimeout);
 
             Console.WriteLine(result.Title);
             foreach (var line in result.Lines)
@@ -58,96 +67,111 @@ public sealed class CommandLine
             return true;
         }
 
-        // already admin
-        var res = cmd == "disable"
-            ? engine.DisableHandsFree(options)
-            : engine.EnableHandsFree(options);
-
-        Console.WriteLine(res.ToPrettyText());
-        Environment.ExitCode = res.Success ? 0 : 1;
+        var report = RunAction(engine, normalizedAction);
+        PrintReport(report);
         return true;
     }
 
     private static bool HandleElevatedChild(AppInfo appInfo, string[] args)
     {
-        // Must be admin. If somehow not, return with a failure message through pipe if possible.
         var pipeName = GetArgValue(args, "--pipe");
-        var action = GetArgValue(args, "--action");
+        var token = GetArgValue(args, "--token");
+        var action = GetArgValue(args, "--action")?.ToLowerInvariant();
 
-        var options = ToggleOptions.FromArgs(args);
-
-        if (string.IsNullOrWhiteSpace(pipeName))
+        if (string.IsNullOrWhiteSpace(pipeName) ||
+            string.IsNullOrWhiteSpace(token) ||
+            action is not ("soft" or "hard" or "restore"))
         {
-            Console.WriteLine("Missing --pipe argument.");
+            Console.Error.WriteLine("Invalid elevated-child arguments.");
             Environment.ExitCode = 2;
             return true;
         }
 
-        if (string.IsNullOrWhiteSpace(action))
-        {
-            return Reply(pipeName, new ElevationIpc.ElevatedResult(false, "Invalid arguments", new[]
-            {
-                "Missing --action disable|enable."
-            }));
-        }
-
         if (!appInfo.IsAdministrator)
         {
-            return Reply(pipeName, new ElevationIpc.ElevatedResult(false, "Not elevated", new[]
-            {
-                "This process is not running as Administrator.",
-                "No changes were made."
-            }));
+            var notElevated = new ElevationIpc.ElevatedResult(
+                false,
+                "NOT ELEVATED",
+                ["The child process is not running as Administrator.", "No changes were made."]);
+
+            Environment.ExitCode = ElevationIpc.RunAsElevatedChildAndReply(
+                pipeName,
+                token,
+                () => notElevated);
+            return true;
         }
 
-        var engine = new ToggleEngine();
+        Environment.ExitCode = ElevationIpc.RunAsElevatedChildAndReply(
+            pipeName,
+            token,
+            () =>
+            {
+                var report = RunAction(new ToggleEngine(), action);
+                return new ElevationIpc.ElevatedResult(
+                    report.Success,
+                    report.Title,
+                    report.ToPrettyLines());
+            });
 
-        return ElevationIpc.RunAsElevatedChildAndReply(pipeName, () =>
-        {
-            var report = action.Equals("disable", StringComparison.OrdinalIgnoreCase)
-                ? engine.DisableHandsFree(options)
-                : action.Equals("enable", StringComparison.OrdinalIgnoreCase)
-                    ? engine.EnableHandsFree(options)
-                    : ToggleReport.Fail("Invalid action", new[] { "Supported actions: disable, enable." });
-
-            return new ElevationIpc.ElevatedResult(
-                report.Success,
-                report.Title,
-                report.ToPrettyLines());
-        }) is 0;
-    }
-
-    private static bool Reply(string pipeName, ElevationIpc.ElevatedResult result)
-    {
-        ElevationIpc.RunAsElevatedChildAndReply(pipeName, () => result);
-        Environment.ExitCode = result.Success ? 0 : 1;
         return true;
     }
 
-    private static string[] BuildElevatedArgs(string cmd, ToggleOptions options)
-    {
-        var list = new List<string>
+    private static ToggleReport RunAction(ToggleEngine engine, string action)
+        => action switch
         {
-            "--elevated",
-            "--action",
-            cmd
+            "soft" => engine.SoftResetHandsFree(),
+            "hard" => engine.HardDisableHandsFree(),
+            "restore" => engine.RestoreHandsFree(),
+            _ => ToggleReport.Failed("INVALID ACTION", [$"Unsupported action: {action}"])
         };
 
-        if (!options.ApplyRegistry)
-            list.Add("--no-registry");
-        if (!options.StartServicesOnEnable)
-            list.Add("--no-start");
-
-        return list.ToArray();
+    private static void PrintReport(ToggleReport report)
+    {
+        Console.WriteLine(report.ToPrettyText());
+        Environment.ExitCode = report.Success ? 0 : 1;
     }
 
     private static string? GetArgValue(string[] args, string key)
     {
-        for (var i = 0; i < args.Length - 1; i++)
+        for (var index = 0; index < args.Length - 1; index++)
         {
-            if (args[i].Equals(key, StringComparison.OrdinalIgnoreCase))
-                return args[i + 1];
+            if (args[index].Equals(key, StringComparison.OrdinalIgnoreCase))
+                return args[index + 1];
         }
+
         return null;
+    }
+
+    private static void WriteUsageError(string message)
+    {
+        Console.Error.WriteLine(message);
+        Console.Error.WriteLine("Run with --help to see supported commands.");
+        Environment.ExitCode = 2;
+    }
+
+    private static void WriteHelp()
+    {
+        Console.WriteLine(
+            """
+            BluetoothHandsFreeToggle
+
+            Usage:
+              BluetoothHandsFreeToggle status
+              BluetoothHandsFreeToggle soft
+              BluetoothHandsFreeToggle hard
+              BluetoothHandsFreeToggle restore
+
+            Commands:
+              status   Show HFP service and backup state. Does not require Administrator.
+              soft     Restart active HFP services without changing startup configuration.
+                       This can clear a stuck HFP session while keeping the microphone available.
+              hard     Stop and disable HFP services to force high-quality playback.
+                       The Bluetooth microphone is unavailable until restore is used.
+              restore  Restore the startup and running state saved by hard mode.
+
+            Backward-compatible aliases:
+              disable = hard
+              enable  = restore
+            """);
     }
 }

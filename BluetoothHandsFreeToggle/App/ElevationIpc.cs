@@ -1,18 +1,67 @@
-﻿using System.Diagnostics;
+using System.Buffers.Binary;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Pipes;
-using System.Text;
 using System.Text.Json;
 
 namespace BluetoothHandsFreeToggle.App;
 
 public static class ElevationIpc
 {
-    public sealed record ElevatedResult(bool Success, string Title, string[] Lines);
+    private const int MaxResponseBytes = 1024 * 1024;
+    private const int ErrorCancelled = 1223;
 
-    public static ElevatedResult RunElevatedAndWait(string exePath, string[] elevatedArgs, TimeSpan timeout)
+    public sealed record ElevatedResult(bool Success, string Title, string[] Lines);
+    private sealed record PipeEnvelope(string Token, ElevatedResult Result);
+
+    public static ElevatedResult RunElevatedAndWait(
+        string executablePath,
+        string[] elevatedArguments,
+        TimeSpan timeout)
+        => RunElevatedAndWaitAsync(executablePath, elevatedArguments, timeout)
+            .GetAwaiter()
+            .GetResult();
+
+    public static int RunAsElevatedChildAndReply(
+        string pipeName,
+        string token,
+        Func<ElevatedResult> action)
     {
-        // Parent process: create a pipe, start elevated child, read result.
-        var pipeName = "bthftoggle_" + Guid.NewGuid().ToString("N");
+        try
+        {
+            using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
+            client.Connect(10_000);
+
+            ElevatedResult result;
+            try
+            {
+                result = action();
+            }
+            catch (Exception ex)
+            {
+                result = new ElevatedResult(
+                    false,
+                    "ELEVATED OPERATION FAILED",
+                    ["Unhandled exception in elevated process:", ex.ToString()]);
+            }
+
+            WriteFrame(client, new PipeEnvelope(token, result));
+            return result.Success ? 0 : 1;
+        }
+        catch
+        {
+            // The parent can report a timeout or a broken IPC channel.
+            return 1;
+        }
+    }
+
+    private static async Task<ElevatedResult> RunElevatedAndWaitAsync(
+        string executablePath,
+        IEnumerable<string> elevatedArguments,
+        TimeSpan timeout)
+    {
+        var pipeName = $"bthftoggle_{Guid.NewGuid():N}";
+        var token = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
         using var pipeServer = new NamedPipeServerStream(
             pipeName,
@@ -21,113 +70,113 @@ public static class ElevationIpc
             PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous);
 
-        var args = BuildArgsWithPipe(elevatedArgs, pipeName);
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executablePath,
+            UseShellExecute = true,
+            Verb = "runas"
+        };
 
+        foreach (var argument in elevatedArguments)
+            startInfo.ArgumentList.Add(argument);
+        startInfo.ArgumentList.Add("--pipe");
+        startInfo.ArgumentList.Add(pipeName);
+        startInfo.ArgumentList.Add("--token");
+        startInfo.ArgumentList.Add(token);
+
+        Process? child;
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = exePath,
-                Arguments = args,
-                UseShellExecute = true,
-                Verb = "runas"
-            };
-
-            Process.Start(psi);
+            child = Process.Start(startInfo);
+            if (child is null)
+                return Failure("ELEVATION FAILED", "Windows did not start the elevated process.");
         }
-        catch (System.ComponentModel.Win32Exception)
+        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {
-            // User cancelled UAC
-            return new ElevatedResult(false, "Elevation cancelled", new[]
-            {
+            return Failure(
+                "ELEVATION CANCELLED",
                 "Administrator permission was not granted.",
-                "No changes were made."
-            });
-        }
-
-        var connected = pipeServer.WaitForConnectionAsync().Wait(timeout);
-        if (!connected)
-        {
-            return new ElevatedResult(false, "Timeout", new[]
-            {
-                "The elevated process did not respond in time.",
-                "No confirmation was received."
-            });
-        }
-
-        using var ms = new MemoryStream();
-        pipeServer.CopyTo(ms);
-        var json = Encoding.UTF8.GetString(ms.ToArray()).Trim();
-
-        try
-        {
-            var result = JsonSerializer.Deserialize<ElevatedResult>(json);
-            return result ?? new ElevatedResult(false, "Unknown result", new[] { "The elevated process returned empty response." });
-        }
-        catch
-        {
-            return new ElevatedResult(false, "Invalid response", new[]
-            {
-                "The elevated process returned an unreadable response.",
-                "Raw:",
-                json.Length > 500 ? json[..500] + "..." : json
-            });
-        }
-    }
-
-    public static int RunAsElevatedChildAndReply(string pipeName, Func<ElevatedResult> action)
-    {
-        ElevatedResult result;
-        try
-        {
-            result = action();
+                "No changes were made.");
         }
         catch (Exception ex)
         {
-            result = new ElevatedResult(false, "Error", new[]
+            return Failure("ELEVATION FAILED", ex.Message, "No changes were made.");
+        }
+
+        using (child)
+        using (var cancellation = new CancellationTokenSource(timeout))
+        {
+            try
             {
-                "Unhandled exception in elevated process:",
-                ex.ToString()
-            });
-        }
+                var connectionTask = pipeServer.WaitForConnectionAsync(cancellation.Token);
+                var exitTask = child.WaitForExitAsync(cancellation.Token);
+                var firstCompleted = await Task.WhenAny(connectionTask, exitTask).ConfigureAwait(false);
 
-        try
-        {
-            using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.Out);
-            client.Connect(10_000);
+                if (firstCompleted == exitTask && !pipeServer.IsConnected)
+                {
+                    await exitTask.ConfigureAwait(false);
+                    return Failure(
+                        "ELEVATED PROCESS EXITED",
+                        $"The elevated process exited before connecting (exit code {child.ExitCode}).");
+                }
 
-            var json = JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = false });
-            var bytes = Encoding.UTF8.GetBytes(json);
-            client.Write(bytes, 0, bytes.Length);
-            client.Flush();
-        }
-        catch
-        {
-            // If IPC fails, we still return a meaningful exit code.
-        }
+                await connectionTask.ConfigureAwait(false);
+                var envelope = await ReadFrameAsync(pipeServer, cancellation.Token).ConfigureAwait(false);
 
-        return result.Success ? 0 : 1;
+                if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                        Convert.FromHexString(envelope.Token),
+                        Convert.FromHexString(token)))
+                {
+                    return Failure("INVALID IPC RESPONSE", "The elevated response token did not match.");
+                }
+
+                return envelope.Result;
+            }
+            catch (OperationCanceledException)
+            {
+                return Failure(
+                    "OPERATION TIMEOUT",
+                    $"The elevated process did not finish within {timeout.TotalSeconds:0} seconds.",
+                    "The operation may still be finishing in the elevated process; check status before retrying.");
+            }
+            catch (Exception ex)
+            {
+                return Failure("IPC FAILED", ex.Message);
+            }
+        }
     }
 
-    private static string BuildArgsWithPipe(string[] elevatedArgs, string pipeName)
+    private static void WriteFrame(Stream stream, PipeEnvelope envelope)
     {
-        // add: --elevated --pipe "<pipename>"
-        var all = new List<string>();
-        all.AddRange(elevatedArgs);
-        all.Add("--pipe");
-        all.Add(pipeName);
+        var payload = JsonSerializer.SerializeToUtf8Bytes(envelope);
+        if (payload.Length > MaxResponseBytes)
+            throw new InvalidDataException("IPC response is too large.");
 
-        return string.Join(" ", all.Select(QuoteIfNeeded));
+        Span<byte> length = stackalloc byte[sizeof(int)];
+        BinaryPrimitives.WriteInt32LittleEndian(length, payload.Length);
+        stream.Write(length);
+        stream.Write(payload);
+        stream.Flush();
     }
 
-    private static string QuoteIfNeeded(string s)
+    private static async Task<PipeEnvelope> ReadFrameAsync(
+        Stream stream,
+        CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(s))
-            return "\"\"";
+        var lengthBytes = new byte[sizeof(int)];
+        await stream.ReadExactlyAsync(lengthBytes, cancellationToken).ConfigureAwait(false);
+        var length = BinaryPrimitives.ReadInt32LittleEndian(lengthBytes);
 
-        if (s.Any(char.IsWhiteSpace) || s.Contains('"'))
-            return "\"" + s.Replace("\"", "\\\"") + "\"";
+        if (length is <= 0 or > MaxResponseBytes)
+            throw new InvalidDataException($"Invalid IPC response length: {length}.");
 
-        return s;
+        var payload = new byte[length];
+        await stream.ReadExactlyAsync(payload, cancellationToken).ConfigureAwait(false);
+
+        return JsonSerializer.Deserialize<PipeEnvelope>(payload)
+               ?? throw new InvalidDataException("The elevated process returned an empty response.");
     }
+
+    private static ElevatedResult Failure(string title, params string[] lines)
+        => new(false, title, lines);
 }

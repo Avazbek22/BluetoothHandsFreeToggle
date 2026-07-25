@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+    branches: ["master", "main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore BluetoothHandsFreeToggle.sln
+
+      - name: Build
+        run: dotnet build BluetoothHandsFreeToggle.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test BluetoothHandsFreeToggle.sln --configuration Release --no-build --no-restore

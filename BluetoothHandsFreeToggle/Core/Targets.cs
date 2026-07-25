@@ -1,12 +1,12 @@
-﻿namespace BluetoothHandsFreeToggle.Core;
+namespace BluetoothHandsFreeToggle.Core;
 
 public static class Targets
 {
-    // Keep it conservative: only known HFP-related services.
-    public static readonly TargetService[] Services =
+    // Keep the list conservative: these are the known Windows Classic HFP services.
+    public static IReadOnlyList<TargetService> Services { get; } =
     [
-        new("BthHFSrv",   "Bluetooth Hands-Free Service (HFP)"),
-        new("BTAGService","Bluetooth Audio Gateway (HFP)")
+        new("BthHFSrv", "Bluetooth Hands-Free Service (HFP)"),
+        new("BTAGService", "Bluetooth Audio Gateway (HFP)")
     ];
 }
 

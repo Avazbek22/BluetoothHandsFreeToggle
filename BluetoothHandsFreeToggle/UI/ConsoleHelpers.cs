@@ -27,6 +27,9 @@ public static class ConsoleHelpers
 
     public static void Pause(string message = "Press any key to continue...")
     {
+        if (Console.IsInputRedirected)
+            return;
+
         Console.WriteLine();
         WithColor(ConsoleColor.DarkGray, () => Console.WriteLine(message));
         Console.ReadKey(true);

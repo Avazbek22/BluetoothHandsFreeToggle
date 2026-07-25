@@ -6,152 +6,141 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-green)
 ![Repo size](https://img.shields.io/github/repo-size/Avazbek22/BluetoothHandsFreeToggle)
 
-BluetoothHandsFreeToggle is a small Windows utility that manages the **Bluetooth Hands-Free (HFP / Headset)** audio path at the operating system level.
+BluetoothHandsFreeToggle is a Windows utility for resetting or disabling the Bluetooth Classic Hands-Free Profile (HFP) when a headset becomes stuck in low-quality call audio instead of stereo A2DP playback.
 
-The tool is designed for scenarios where Windows applications (most commonly games or communication-enabled apps) implicitly activate the Hands-Free profile, forcing Bluetooth headphones into low-quality call audio instead of stereo (**A2DP**).
+**Download:** [Latest Release](../../releases/latest) · [All Releases](../../releases)
 
-### What this project is
+## Modes
 
-* A **console-based Windows tool** for enabling or disabling Bluetooth Hands-Free (HFP) support
-* Focused on **audio stability**, not device removal or driver manipulation
-* Intended for users who want Bluetooth headphones for **output only**, often with a separate microphone
+### Soft reset
 
-### How it works (high-level)
+Restarts only HFP services that are currently active.
 
-* Detects known Windows components responsible for Bluetooth Hands-Free (HFP)
-* Stops and disables them when requested
-* Optionally applies a registry-level startup lock for reliability
-* Can restore a safe default state using a small local backup
+- Does not change service startup configuration.
+- Does not create or replace a backup.
+- Keeps the Bluetooth headset microphone available after the restart.
+- Can clear an HFP session that remained active after a game or communications app stopped using the microphone.
 
-### Technology stack
+### Hard mode
 
-* **Language:** C#
-* **Runtime:** .NET (console application)
-* **Platform:** Windows 10 / Windows 11
-* **Privileges:** Administrator (required only to change service state)
+Stops and disables HFP services to force high-quality playback.
 
-**Download:** 👉 **[Latest Release](../../releases/latest)** • **[All Releases](../../releases)**
+- Saves the original startup and Running/Stopped state before making changes.
+- Disables the Bluetooth Classic headset microphone system-wide.
+- Is intended for output-only use, often with a laptop or USB microphone.
 
----
+### Restore
+
+Restores the startup and Running/Stopped state saved by Hard mode. If no backup exists, it uses the recovery defaults `Manual + Running`.
+
+## Bluetooth Classic limitation
+
+Bluetooth Classic cannot provide A2DP-quality playback while the HFP microphone is actively in use. Soft reset can fix a profile that is incorrectly stuck, but it cannot remove this protocol limitation.
+
+On Windows 11, A2DP and HFP audio endpoints are unified and Windows selects HFP automatically when an application opens the Bluetooth microphone. See [Microsoft's Bluetooth Classic Audio documentation](https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-classic-audio).
 
 ## Quick start
 
-1. Download `BluetoothHandsFreeToggle.exe` from **[Latest Release](../../releases/latest)**.
-2. Run it (Windows will ask for **Administrator** once).
-3. Use the menu:
+1. Download `BluetoothHandsFreeToggle.exe` from the [latest release](../../releases/latest).
+2. Run it and approve UAC.
+3. Choose:
 
-   * **[1] Status**
-   * **[2] Disable Hands‑Free (HFP)**
-   * **[3] Enable Hands‑Free (HFP)**
+   - `[1]` Status
+   - `[2]` Soft reset
+   - `[3]` Hard mode
+   - `[4]` Restore
 
-That’s it.
+Hard mode displays an additional warning before disabling HFP.
 
----
+## Command line
 
-## When you need it
+```powershell
+BluetoothHandsFreeToggle.exe status
+BluetoothHandsFreeToggle.exe soft
+BluetoothHandsFreeToggle.exe hard
+BluetoothHandsFreeToggle.exe restore
+```
 
-BluetoothHandsFreeToggle is useful if you:
+Backward-compatible aliases:
 
-* Play games where sound randomly turns into “telephone quality” (very common with **Call of Duty / Warzone / MW**).
-* Use Bluetooth headphones for gaming and **never want Windows to switch to Headset/Hands‑Free**.
-* Use a **separate microphone** (laptop mic / USB mic) and want Bluetooth for output only.
-* Want stable audio devices without Windows “communications” surprises.
+```text
+disable = hard
+enable  = restore
+```
 
----
+Exit codes:
 
-## What it does (simple explanation)
+- `0` — the operation completed and the final state was verified;
+- `1` — the operation failed completely or partially;
+- `2` — invalid command-line arguments.
 
-Bluetooth headsets on Windows usually expose two profiles:
+Unknown commands and options do not open the interactive UI or trigger UAC.
 
-* **A2DP (Stereo)** — great audio quality ✅
-* **HFP / Hands‑Free (Headset / phone mode)** — low quality call audio ❌
+## Safe restore behavior
 
-Some apps trigger HFP (even if you don’t explicitly enable voice chat). Once HFP activates, Windows may switch your headset into the “Headset” device and your audio quality drops.
+The original state is stored in:
 
-**This tool disables the Windows components that enable HFP**, so Windows can no longer push your headset into phone mode.
+```text
+%ProgramData%\BluetoothHandsFreeToggle\backup.json
+```
 
----
+Safety rules:
 
-## How it works (under the hood)
+- If the backup cannot be created, Hard mode makes no service changes.
+- A repeated Hard mode call preserves the first original-state backup.
+- The backup is written atomically through a temporary file.
+- A partial Restore keeps the backup for another attempt.
+- A fully successful Restore removes the backup.
+- A named mutex prevents concurrent operations from changing services and backup state at the same time.
+- Every operation reads the final service state; partial failures return exit code `1`.
 
-BluetoothHandsFreeToggle performs **only a small, conservative set of changes**:
+The tool uses the Windows Service Control Manager API. It does not directly edit service startup values in the registry, uninstall drivers, remove pairings, or modify firmware.
 
-* Targets known HFP-related Windows components (services) when they exist on your system.
-* Stops them (when possible) and sets startup to **Disabled**.
-* Optionally applies a registry “Start=Disabled” lock for reliability.
-* Creates a small backup so “Enable” can restore a safe baseline.
+## Supported Windows components
 
-✅ It does **not** uninstall drivers, remove Bluetooth pairings, or modify firmware.
+The target list is intentionally conservative:
 
-**Backup location:**
+- `BthHFSrv` — present on some Windows 10 systems;
+- `BTAGService` — Bluetooth Audio Gateway, commonly present on Windows 11.
 
-* `%ProgramData%\BluetoothHandsFreeToggle\backup.json`
+It does not disable core Bluetooth services such as `bthserv` or `BluetoothUserService`.
 
----
+Bluetooth LE Audio and vendor-specific Bluetooth stacks can behave differently. Hard mode targets Bluetooth Classic HFP for the whole system, not one selected headset.
 
-## Important notes
+## Building and testing
 
-* When HFP is **disabled**, your Bluetooth headset **microphone / call mode will not work**.
-* If you need voice chat, use:
+Requirements:
 
-  * Laptop built‑in mic, or
-  * USB microphone / audio interface.
+- Windows 10/11
+- .NET 10 SDK
 
-You can always restore voice mode by selecting **Enable Hands‑Free (HFP)**.
+```powershell
+dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-build --no-restore
+```
 
----
+Warnings are treated as build errors. Unit tests cover Soft/Hard/Restore state transitions, backup preservation, partial failures, and status-query errors.
 
-## FAQ
+Create a compressed, self-contained, single-file `win-x64` build:
 
-### Will this break stereo (A2DP) audio?
+```powershell
+dotnet publish BluetoothHandsFreeToggle/BluetoothHandsFreeToggle.csproj `
+  --configuration Release `
+  --no-restore `
+  -p:PublishProfile=win-x64
+```
 
-No. The goal is to keep your headset in **Stereo (A2DP)** and prevent Windows from switching to **Hands‑Free (HFP)**.
+## License
 
-### Why does Windows keep switching my headset into “phone mode”?
+[MIT](LICENSE) © 2026 Avazbek Olimov
 
-Because an app requests voice/communications audio, Windows enables the headset’s **Hands‑Free profile**. That profile trades audio quality for bidirectional “call” audio.
+## Русский
 
-### Is this safe?
+BluetoothHandsFreeToggle помогает вернуть нормальное качество звука, когда Windows переводит Bluetooth-наушники в телефонный режим HFP.
 
-The tool is intentionally conservative:
+- **Soft reset** перезапускает активные HFP-службы, не меняет их автозапуск и сохраняет доступность микрофона.
+- **Hard mode** полностью отключает HFP ради приоритета качества воспроизведения; Bluetooth-микрофон не работает до Restore.
+- **Restore** возвращает сохранённые настройки и исходное состояние служб.
 
-* It only touches known HFP components.
-* It avoids driver removal and pairing resets.
-* It keeps a small backup for restore.
-
-### I disabled HFP but audio still sounds bad. Why?
-
-Usually an app already switched your audio pipeline and keeps the old state.
-Try:
-
-1. Close the game/app that triggered it.
-2. Disconnect and reconnect the headset.
-3. If stubborn, reboot once.
-
-### Status shows only one component present. Is that normal?
-
-Yes. Different Windows builds/drivers expose HFP via different service sets.
-
-### Will antivirus warn about the EXE?
-
-Sometimes. Tools that require admin and change service startup modes can trigger heuristics. You can check the release’s SHA‑256 on GitHub and build from source if you prefer.
-
----
-
-## Tips for the best experience
-
-* For gaming, keep Bluetooth for **output only** and use a **separate mic**.
-* If a specific game triggers HFP, disable HFP first, then launch the game.
-* If you ever need headset mic/calls, temporarily **Enable** HFP.
-
----
-
-## License (MIT)
-
----
-
-## RU Русский (кратко)
-
-BluetoothHandsFreeToggle отключает в Windows режим **Hands‑Free (HFP)**, чтобы Bluetooth‑наушники не превращались в «телефонный режим» с ужасным качеством звука. Особенно полезно для игр (включая Call of Duty), когда приложение дёргает голос/связь и ломает стерео.
-
-Скачать: **[Latest Release](../../releases/latest)**
+Важно: при активном Bluetooth Classic микрофоне одновременно сохранить A2DP-качество технически невозможно. Soft mode предназначен для сброса ошибочно «залипшего» HFP, а Hard mode — для гарантированного исключения HFP.

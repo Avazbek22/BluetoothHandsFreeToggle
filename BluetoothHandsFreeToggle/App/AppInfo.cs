@@ -25,8 +25,9 @@ public sealed class AppInfo
 
     public static AppInfo Create()
     {
-        var exePath = Process.GetCurrentProcess().MainModule?.FileName
-                      ?? Environment.ProcessPath
+        using var process = Process.GetCurrentProcess();
+        var exePath = Environment.ProcessPath
+                      ?? process.MainModule?.FileName
                       ?? $"{AppName}.exe";
 
         var isAdmin = AdminHelper.IsAdministrator();
@@ -159,14 +160,14 @@ public sealed class AppInfo
     {
         // winver uses winbrand.dll BrandingFormatString internally.
         // The returned PWSTR must be freed with GlobalFree to avoid leaks.
+        var ptr = IntPtr.Zero;
         try
         {
-            var ptr = BrandingFormatString(token);
+            ptr = BrandingFormatString(token);
             if (ptr == IntPtr.Zero)
                 return null;
 
             var s = Marshal.PtrToStringUni(ptr)?.Trim();
-            GlobalFree(ptr);
             return string.IsNullOrWhiteSpace(s) ? null : s;
         }
         catch (DllNotFoundException)
@@ -180,6 +181,11 @@ public sealed class AppInfo
         catch
         {
             return null;
+        }
+        finally
+        {
+            if (ptr != IntPtr.Zero)
+                _ = GlobalFree(ptr);
         }
     }
 

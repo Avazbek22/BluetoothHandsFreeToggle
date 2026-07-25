@@ -1,175 +1,200 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 
 namespace BluetoothHandsFreeToggle.Windows;
 
 internal static class NativeServiceApi
 {
-    private const int SC_MANAGER_CONNECT = 0x0001;
-
-    private const int SERVICE_QUERY_CONFIG = 0x0001;
-    private const int SERVICE_CHANGE_CONFIG = 0x0002;
-
-    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern IntPtr OpenSCManager(string? machineName, string? databaseName, int dwAccess);
+    private const int ScManagerConnect = 0x0001;
+    private const int ServiceQueryConfig = 0x0001;
+    private const int ServiceChangeConfig = 0x0002;
+    private const int ServiceNoChange = -1;
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    private static extern IntPtr OpenService(IntPtr hSCManager, string lpServiceName, int dwDesiredAccess);
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr OpenSCManager(
+        string? machineName,
+        string? databaseName,
+        int desiredAccess);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern IntPtr OpenService(
+        IntPtr serviceControlManager,
+        string serviceName,
+        int desiredAccess);
 
     [DllImport("advapi32.dll", SetLastError = true)]
-    private static extern bool CloseServiceHandle(IntPtr hSCObject);
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseServiceHandle(IntPtr serviceObject);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool QueryServiceConfig(
-        IntPtr hService,
-        IntPtr queryServiceConfigPtr,
-        int cbBufSize,
-        out int pcbBytesNeeded);
+        IntPtr service,
+        IntPtr queryServiceConfig,
+        int bufferSize,
+        out int bytesNeeded);
 
     [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ChangeServiceConfig(
-        IntPtr hService,
-        int dwServiceType,
-        int dwStartType,
-        int dwErrorControl,
-        string? lpBinaryPathName,
-        string? lpLoadOrderGroup,
-        IntPtr lpdwTagId,
-        string? lpDependencies,
-        string? lpServiceStartName,
-        string? lpPassword,
-        string? lpDisplayName);
+        IntPtr service,
+        int serviceType,
+        int startType,
+        int errorControl,
+        string? binaryPathName,
+        string? loadOrderGroup,
+        IntPtr tagId,
+        string? dependencies,
+        string? serviceStartName,
+        string? password,
+        string? displayName);
 
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct QUERY_SERVICE_CONFIG
+    [StructLayout(LayoutKind.Sequential)]
+    private struct QueryServiceConfigData
     {
-        public int dwServiceType;
-        public int dwStartType;
-        public int dwErrorControl;
-        public IntPtr lpBinaryPathName;
-        public IntPtr lpLoadOrderGroup;
-        public int dwTagId;
-        public IntPtr lpDependencies;
-        public IntPtr lpServiceStartName;
-        public IntPtr lpDisplayName;
+        public int ServiceType;
+        public int StartType;
+        public int ErrorControl;
+        public IntPtr BinaryPathName;
+        public IntPtr LoadOrderGroup;
+        public int TagId;
+        public IntPtr Dependencies;
+        public IntPtr ServiceStartName;
+        public IntPtr DisplayName;
     }
 
-    public static bool TryGetStartType(string serviceName, out int startType, out string? error)
+    public static bool TryGetStartType(
+        string serviceName,
+        out int startType,
+        out int nativeErrorCode,
+        out string? error)
     {
         startType = -1;
+        nativeErrorCode = 0;
         error = null;
 
-        var scm = OpenSCManager(null, null, SC_MANAGER_CONNECT);
-        if (scm == IntPtr.Zero)
+        var serviceControlManager = OpenSCManager(null, null, ScManagerConnect);
+        if (serviceControlManager == IntPtr.Zero)
         {
-            error = "OpenSCManager failed: " + Marshal.GetLastWin32Error();
+            nativeErrorCode = Marshal.GetLastWin32Error();
+            error = FormatWin32Error("OpenSCManager", nativeErrorCode);
             return false;
         }
 
         try
         {
-            var svc = OpenService(scm, serviceName, SERVICE_QUERY_CONFIG);
-            if (svc == IntPtr.Zero)
+            var service = OpenService(serviceControlManager, serviceName, ServiceQueryConfig);
+            if (service == IntPtr.Zero)
             {
-                var code = Marshal.GetLastWin32Error();
-                error = code == 1060 ? "Service not found." : "OpenService failed: " + code;
+                nativeErrorCode = Marshal.GetLastWin32Error();
+                error = FormatWin32Error("OpenService", nativeErrorCode);
                 return false;
             }
 
             try
             {
-                // First call to get required size
-                QueryServiceConfig(svc, IntPtr.Zero, 0, out var needed);
-                if (needed <= 0)
+                _ = QueryServiceConfig(service, IntPtr.Zero, 0, out var bytesNeeded);
+                if (bytesNeeded <= 0)
                 {
-                    error = "QueryServiceConfig size query failed: " + Marshal.GetLastWin32Error();
+                    nativeErrorCode = Marshal.GetLastWin32Error();
+                    error = FormatWin32Error("QueryServiceConfig(size)", nativeErrorCode);
                     return false;
                 }
 
-                var ptr = Marshal.AllocHGlobal(needed);
+                var buffer = Marshal.AllocHGlobal(bytesNeeded);
                 try
                 {
-                    var ok = QueryServiceConfig(svc, ptr, needed, out _);
-                    if (!ok)
+                    if (!QueryServiceConfig(service, buffer, bytesNeeded, out _))
                     {
-                        error = "QueryServiceConfig failed: " + Marshal.GetLastWin32Error();
+                        nativeErrorCode = Marshal.GetLastWin32Error();
+                        error = FormatWin32Error("QueryServiceConfig", nativeErrorCode);
                         return false;
                     }
 
-                    var qsc = Marshal.PtrToStructure<QUERY_SERVICE_CONFIG>(ptr);
-                    startType = qsc.dwStartType;
+                    startType = Marshal.PtrToStructure<QueryServiceConfigData>(buffer).StartType;
                     return true;
                 }
                 finally
                 {
-                    Marshal.FreeHGlobal(ptr);
+                    Marshal.FreeHGlobal(buffer);
                 }
             }
             finally
             {
-                CloseServiceHandle(svc);
+                _ = CloseServiceHandle(service);
             }
         }
         finally
         {
-            CloseServiceHandle(scm);
+            _ = CloseServiceHandle(serviceControlManager);
         }
     }
 
-    public static bool TrySetStartType(string serviceName, int startType, out string? error)
+    public static bool TrySetStartType(
+        string serviceName,
+        int startType,
+        out int nativeErrorCode,
+        out string? error)
     {
+        nativeErrorCode = 0;
         error = null;
 
-        var scm = OpenSCManager(null, null, SC_MANAGER_CONNECT);
-        if (scm == IntPtr.Zero)
+        var serviceControlManager = OpenSCManager(null, null, ScManagerConnect);
+        if (serviceControlManager == IntPtr.Zero)
         {
-            error = "OpenSCManager failed: " + Marshal.GetLastWin32Error();
+            nativeErrorCode = Marshal.GetLastWin32Error();
+            error = FormatWin32Error("OpenSCManager", nativeErrorCode);
             return false;
         }
 
         try
         {
-            var svc = OpenService(scm, serviceName, SERVICE_CHANGE_CONFIG);
-            if (svc == IntPtr.Zero)
+            var service = OpenService(serviceControlManager, serviceName, ServiceChangeConfig);
+            if (service == IntPtr.Zero)
             {
-                var code = Marshal.GetLastWin32Error();
-                error = code == 1060 ? "Service not found." : "OpenService failed: " + code;
+                nativeErrorCode = Marshal.GetLastWin32Error();
+                error = FormatWin32Error("OpenService", nativeErrorCode);
                 return false;
             }
 
             try
             {
-                // Keep other parameters unchanged by passing SERVICE_NO_CHANGE for those.
-                const int SERVICE_NO_CHANGE = -1;
-
-                var ok = ChangeServiceConfig(
-                    svc,
-                    SERVICE_NO_CHANGE,
-                    startType,
-                    SERVICE_NO_CHANGE,
-                    null,
-                    null,
-                    IntPtr.Zero,
-                    null,
-                    null,
-                    null,
-                    null);
-
-                if (!ok)
+                if (ChangeServiceConfig(
+                        service,
+                        ServiceNoChange,
+                        startType,
+                        ServiceNoChange,
+                        null,
+                        null,
+                        IntPtr.Zero,
+                        null,
+                        null,
+                        null,
+                        null))
                 {
-                    error = "ChangeServiceConfig failed: " + Marshal.GetLastWin32Error();
-                    return false;
+                    return true;
                 }
 
-                return true;
+                nativeErrorCode = Marshal.GetLastWin32Error();
+                error = FormatWin32Error("ChangeServiceConfig", nativeErrorCode);
+                return false;
             }
             finally
             {
-                CloseServiceHandle(svc);
+                _ = CloseServiceHandle(service);
             }
         }
         finally
         {
-            CloseServiceHandle(scm);
+            _ = CloseServiceHandle(serviceControlManager);
         }
     }
+
+    private static string FormatWin32Error(string operation, int errorCode)
+        => $"{operation} failed with Win32 error {errorCode}: " +
+           new System.ComponentModel.Win32Exception(errorCode).Message;
 }
