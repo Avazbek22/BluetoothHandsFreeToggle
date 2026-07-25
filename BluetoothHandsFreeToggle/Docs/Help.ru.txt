@@ -33,13 +33,5 @@ BluetoothHandsFreeToggle возвращает нормальное стерео�
  - Если приложение запомнило старый аудиомаршрут, переподключите гарнитуру или
    перезапустите воспроизведение после операции.
 
-Командная строка:
- - BluetoothHandsFreeToggle.exe status
- - BluetoothHandsFreeToggle.exe soft
- - BluetoothHandsFreeToggle.exe hard
- - BluetoothHandsFreeToggle.exe restore
- - BluetoothHandsFreeToggle.exe language en
- - BluetoothHandsFreeToggle.exe language ru
-
 Проект:
  - https://github.com/Avazbek22/BluetoothHandsFreeToggle

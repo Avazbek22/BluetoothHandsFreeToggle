@@ -7,6 +7,7 @@ namespace BluetoothHandsFreeToggle.App;
 public sealed class AppInfo
 {
     public const string AppName = "BluetoothHandsFreeToggle";
+    public const string SupportUrl = "https://boosty.to/avazbek22";
 
     public string ExePath { get; }
     public bool IsAdministrator { get; }

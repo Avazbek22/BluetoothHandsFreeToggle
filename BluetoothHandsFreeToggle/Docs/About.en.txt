@@ -6,7 +6,7 @@ Features:
  - Hard mode that prioritizes playback quality
  - Backup-based restoration of the original service state
  - English and Russian interface
- - Interactive menu and command-line operation
+ - Focused interactive console menu
 
 The utility manages a conservative list of Windows HFP services. It does not
 uninstall drivers, remove Bluetooth pairings or change headset firmware.

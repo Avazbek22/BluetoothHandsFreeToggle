@@ -22,7 +22,7 @@ public static class AdminHelper
         }
     }
 
-    public static bool TryRelaunchAsAdministrator(string executablePath, IEnumerable<string> arguments)
+    public static bool TryRelaunchAsAdministrator(string executablePath)
     {
         try
         {
@@ -32,9 +32,6 @@ public static class AdminHelper
                 UseShellExecute = true,
                 Verb = "runas"
             };
-
-            foreach (var argument in arguments)
-                startInfo.ArgumentList.Add(argument);
 
             using var process = Process.Start(startInfo);
             return process is not null;

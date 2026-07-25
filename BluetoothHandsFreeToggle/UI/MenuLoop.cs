@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BluetoothHandsFreeToggle.App;
 using BluetoothHandsFreeToggle.Core;
 using BluetoothHandsFreeToggle.Localization;
@@ -20,6 +21,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
             Console.WriteLine($"[5] {Text.Get("menu.help")}");
             Console.WriteLine($"[6] {Text.Get("menu.about")}");
             Console.WriteLine($"[7] {Text.Get("menu.changeLanguage")}");
+            Console.WriteLine($"[8] {Text.Get("menu.support")}");
             Console.WriteLine($"[0] {Text.Get("menu.exit")}");
             Console.WriteLine();
 
@@ -49,11 +51,33 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
                 case "7":
                     Text.ToggleLanguage();
                     break;
+                case "8":
+                    OpenSupportPage();
+                    break;
                 default:
                     ConsoleHelpers.WriteWarning(Text.Get("common.invalidChoice"));
                     ConsoleHelpers.Pause();
                     break;
             }
+        }
+    }
+
+    private static void OpenSupportPage()
+    {
+        try
+        {
+            using var process = Process.Start(new ProcessStartInfo
+            {
+                FileName = AppInfo.SupportUrl,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            ConsoleHelpers.WriteError(Text.Get("support.openFailed"));
+            ConsoleHelpers.WriteInfo(
+                Text.Format("support.openManually", AppInfo.SupportUrl));
+            ConsoleHelpers.Pause();
         }
     }
 

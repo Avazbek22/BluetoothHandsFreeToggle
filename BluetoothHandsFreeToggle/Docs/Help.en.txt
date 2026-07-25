@@ -30,13 +30,5 @@ Troubleshooting:
  - Reconnect the headset or restart audio playback after an operation if an app
    cached the previous audio route.
 
-Command line:
- - BluetoothHandsFreeToggle.exe status
- - BluetoothHandsFreeToggle.exe soft
- - BluetoothHandsFreeToggle.exe hard
- - BluetoothHandsFreeToggle.exe restore
- - BluetoothHandsFreeToggle.exe language en
- - BluetoothHandsFreeToggle.exe language ru
-
 Project:
  - https://github.com/Avazbek22/BluetoothHandsFreeToggle

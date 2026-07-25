@@ -15,15 +15,11 @@ try
     Console.Title = AppInfo.AppName;
 
     var appInfo = AppInfo.Create();
-    var commandLine = new CommandLine(args);
-
-    if (commandLine.TryHandleNonInteractive(appInfo))
-        return;
 
     // Interactive mode asks for elevation once. If UAC is cancelled, status remains available.
     if (!appInfo.IsAdministrator)
     {
-        var startedElevated = AdminHelper.TryRelaunchAsAdministrator(appInfo.ExePath, args);
+        var startedElevated = AdminHelper.TryRelaunchAsAdministrator(appInfo.ExePath);
         if (startedElevated)
             return;
 
