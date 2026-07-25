@@ -1,5 +1,6 @@
 using System.ServiceProcess;
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Windows;
 
@@ -67,7 +68,10 @@ public sealed class WindowsServiceManager : IServiceManager
         }
         catch (System.ServiceProcess.TimeoutException ex)
         {
-            errorMessage = $"Timed out after {timeout.TotalSeconds:0} seconds: {ex.Message}";
+            errorMessage = Text.Format(
+                "service.timeoutError",
+                timeout.TotalSeconds,
+                ex.Message);
             return false;
         }
         catch (InvalidOperationException ex)
@@ -77,7 +81,10 @@ public sealed class WindowsServiceManager : IServiceManager
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            errorMessage = $"Win32 error {ex.NativeErrorCode}: {ex.Message}";
+            errorMessage = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
             return false;
         }
         catch (Exception ex)
@@ -129,7 +136,10 @@ public sealed class WindowsServiceManager : IServiceManager
         }
         catch (System.ServiceProcess.TimeoutException ex)
         {
-            errorMessage = $"Timed out after {timeout.TotalSeconds:0} seconds: {ex.Message}";
+            errorMessage = Text.Format(
+                "service.timeoutError",
+                timeout.TotalSeconds,
+                ex.Message);
             return false;
         }
         catch (InvalidOperationException ex)
@@ -139,7 +149,10 @@ public sealed class WindowsServiceManager : IServiceManager
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            errorMessage = $"Win32 error {ex.NativeErrorCode}: {ex.Message}";
+            errorMessage = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
             return false;
         }
         catch (Exception ex)
@@ -164,7 +177,9 @@ public sealed class WindowsServiceManager : IServiceManager
 
         if (nativeStartType < 0)
         {
-            errorMessage = $"Unsupported startup type: {startType}.";
+            errorMessage = Text.Format(
+                "service.unsupportedStartupType",
+                ServiceStateText.Get(startType));
             return false;
         }
 
@@ -198,7 +213,10 @@ public sealed class WindowsServiceManager : IServiceManager
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            error = $"Win32 error {ex.NativeErrorCode}: {ex.Message}";
+            error = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
             return ServiceRunState.Unknown;
         }
         catch (Exception ex)

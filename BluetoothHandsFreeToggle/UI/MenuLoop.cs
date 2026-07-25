@@ -1,5 +1,6 @@
 using BluetoothHandsFreeToggle.App;
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Ui;
 
@@ -9,14 +10,17 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
     {
         while (true)
         {
-            Console.Clear();
+            ConsoleHelpers.TryClearScreen();
             RenderHeader();
 
-            Console.WriteLine("[1] Get status");
-            PrintActionLine(2, "Soft reset (preserve HFP microphone)", requiresAdmin: true);
-            PrintActionLine(3, "Hard mode (force high-quality playback, disable HFP microphone)", requiresAdmin: true);
-            PrintActionLine(4, "Restore HFP microphone and original service state", requiresAdmin: true);
-            Console.WriteLine("[0] Exit");
+            Console.WriteLine($"[1] {Text.Get("menu.status")}");
+            PrintActionLine(2, Text.Get("menu.soft"), requiresAdmin: true);
+            PrintActionLine(3, Text.Get("menu.hard"), requiresAdmin: true);
+            PrintActionLine(4, Text.Get("menu.restore"), requiresAdmin: true);
+            Console.WriteLine($"[5] {Text.Get("menu.help")}");
+            Console.WriteLine($"[6] {Text.Get("menu.about")}");
+            Console.WriteLine($"[7] {Text.Get("menu.changeLanguage")}");
+            Console.WriteLine($"[0] {Text.Get("menu.exit")}");
             Console.WriteLine();
 
             switch (ConsoleHelpers.ReadMenuChoice())
@@ -27,17 +31,26 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
                     ShowStatus();
                     break;
                 case "2":
-                    RunAction("Soft reset", engine.SoftResetHandsFree);
+                    RunAction(Text.Get("menu.soft"), engine.SoftResetHandsFree);
                     break;
                 case "3":
                     if (ConfirmHardMode())
-                        RunAction("Hard mode", engine.HardDisableHandsFree);
+                        RunAction(Text.Get("menu.hard"), engine.HardDisableHandsFree);
                     break;
                 case "4":
-                    RunAction("Restore", engine.RestoreHandsFree);
+                    RunAction(Text.Get("menu.restore"), engine.RestoreHandsFree);
+                    break;
+                case "5":
+                    ShowDocumentation(Text.Get("screen.help"), DocumentationDocument.Help);
+                    break;
+                case "6":
+                    ShowDocumentation(Text.Get("screen.about"), DocumentationDocument.About);
+                    break;
+                case "7":
+                    Text.ToggleLanguage();
                     break;
                 default:
-                    ConsoleHelpers.WriteWarning("Invalid choice.");
+                    ConsoleHelpers.WriteWarning(Text.Get("common.invalidChoice"));
                     ConsoleHelpers.Pause();
                     break;
             }
@@ -54,29 +67,32 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
 
         ConsoleHelpers.WithColor(
             ConsoleColor.DarkGray,
-            () => Console.WriteLine($"[{id}] {text} (Admin required)"));
+            () => Console.WriteLine(
+                $"[{id}] {text} ({Text.Get("menu.adminRequiredSuffix")})"));
     }
 
     private void RenderHeader()
     {
         ConsoleHelpers.WriteHeader(AppInfo.AppName);
-        Console.WriteLine($"Version: {appInfo.Version}");
-        Console.WriteLine($"OS: {appInfo.OsDisplayName}");
-        Console.WriteLine($"Runtime: {appInfo.FrameworkDescription}");
+        Console.WriteLine($"{Text.Get("header.version")}: {appInfo.Version}");
+        Console.WriteLine($"{Text.Get("header.os")}: {appInfo.OsDisplayName}");
+        Console.WriteLine($"{Text.Get("header.runtime")}: {appInfo.FrameworkDescription}");
 
         if (appInfo.IsAdministrator)
-            ConsoleHelpers.WithColor(ConsoleColor.Green, () => Console.WriteLine("Admin: Yes"));
+            ConsoleHelpers.WithColor(
+                ConsoleColor.Green,
+                () => Console.WriteLine(Text.Get("header.adminYes")));
         else
             ConsoleHelpers.WithColor(
                 ConsoleColor.Yellow,
-                () => Console.WriteLine("Admin: No (read-only mode)"));
+                () => Console.WriteLine(Text.Get("header.adminNo")));
 
         Console.WriteLine();
     }
 
     private void ShowStatus()
     {
-        Console.Clear();
+        ConsoleHelpers.TryClearScreen();
         RenderHeader();
 
         var report = engine.GetStatusReport();
@@ -89,8 +105,8 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
     {
         if (!appInfo.IsAdministrator)
         {
-            ConsoleHelpers.WriteWarning($"{actionName} requires Administrator.");
-            ConsoleHelpers.WriteInfo("Restart the app and allow the UAC prompt.");
+            ConsoleHelpers.WriteWarning(Text.Format("ui.actionRequiresAdmin", actionName));
+            ConsoleHelpers.WriteInfo(Text.Get("ui.restartAndAllowUac"));
             ConsoleHelpers.Pause();
             return;
         }
@@ -102,23 +118,29 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
     {
         if (!appInfo.IsAdministrator)
         {
-            ConsoleHelpers.WriteWarning("Hard mode requires Administrator.");
+            ConsoleHelpers.WriteWarning(
+                Text.Format("ui.actionRequiresAdmin", Text.Get("menu.hard")));
             ConsoleHelpers.Pause();
             return false;
         }
 
-        Console.Clear();
+        ConsoleHelpers.TryClearScreen();
         RenderHeader();
-        ConsoleHelpers.WriteWarning("Hard mode disables Bluetooth Classic HFP system-wide.");
-        ConsoleHelpers.WriteWarning("The Bluetooth headset microphone will not work until Restore is used.");
-        Console.Write("Continue? [y/N]: ");
+        ConsoleHelpers.WriteWarning(Text.Get("ui.hard.warningGlobal"));
+        ConsoleHelpers.WriteWarning(Text.Get("ui.hard.warningMicrophone"));
+        Console.Write(Text.Get("ui.hard.confirm"));
 
-        return string.Equals(Console.ReadLine()?.Trim(), "y", StringComparison.OrdinalIgnoreCase);
+        var answer = Console.ReadLine()?.Trim();
+        return answer is not null &&
+               (answer.Equals("y", StringComparison.OrdinalIgnoreCase) ||
+                answer.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                answer.Equals("д", StringComparison.OrdinalIgnoreCase) ||
+                answer.Equals("да", StringComparison.OrdinalIgnoreCase));
     }
 
     private void ShowReport(ToggleReport report)
     {
-        Console.Clear();
+        ConsoleHelpers.TryClearScreen();
         RenderHeader();
 
         if (report.Success)
@@ -131,6 +153,23 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
 
         if (report.Snapshots.Count > 0)
             ConsoleTable.PrintStatusTable(report.Snapshots);
+
+        ConsoleHelpers.Pause();
+    }
+
+    private static void ShowDocumentation(
+        string title,
+        DocumentationDocument document)
+    {
+        ConsoleHelpers.TryClearScreen();
+        ConsoleHelpers.WriteHeader(AppInfo.AppName);
+        ConsoleHelpers.WithColor(
+            ConsoleColor.White,
+            () => Console.WriteLine(title));
+        Console.WriteLine();
+
+        foreach (var line in DocumentationProvider.GetLines(document))
+            Console.WriteLine(line);
 
         ConsoleHelpers.Pause();
     }

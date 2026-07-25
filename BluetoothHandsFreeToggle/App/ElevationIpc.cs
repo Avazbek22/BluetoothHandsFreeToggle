@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.App;
 
@@ -41,8 +42,8 @@ public static class ElevationIpc
             {
                 result = new ElevatedResult(
                     false,
-                    "ELEVATED OPERATION FAILED",
-                    ["Unhandled exception in elevated process:", ex.ToString()]);
+                    Text.Get("elevation.operationFailed"),
+                    [Text.Get("elevation.unhandledException"), ex.ToString()]);
             }
 
             WriteFrame(client, new PipeEnvelope(token, result));
@@ -89,18 +90,25 @@ public static class ElevationIpc
         {
             child = Process.Start(startInfo);
             if (child is null)
-                return Failure("ELEVATION FAILED", "Windows did not start the elevated process.");
+            {
+                return Failure(
+                    Text.Get("elevation.failed"),
+                    Text.Get("elevation.windowsDidNotStart"));
+            }
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {
             return Failure(
-                "ELEVATION CANCELLED",
-                "Administrator permission was not granted.",
-                "No changes were made.");
+                Text.Get("elevation.cancelled"),
+                Text.Get("elevation.permissionDenied"),
+                Text.Get("cli.noChanges"));
         }
         catch (Exception ex)
         {
-            return Failure("ELEVATION FAILED", ex.Message, "No changes were made.");
+            return Failure(
+                Text.Get("elevation.failed"),
+                ex.Message,
+                Text.Get("cli.noChanges"));
         }
 
         using (child)
@@ -116,8 +124,8 @@ public static class ElevationIpc
                 {
                     await exitTask.ConfigureAwait(false);
                     return Failure(
-                        "ELEVATED PROCESS EXITED",
-                        $"The elevated process exited before connecting (exit code {child.ExitCode}).");
+                        Text.Get("elevation.processExited"),
+                        Text.Format("elevation.processExitedDetail", child.ExitCode));
                 }
 
                 await connectionTask.ConfigureAwait(false);
@@ -127,7 +135,9 @@ public static class ElevationIpc
                         Convert.FromHexString(envelope.Token),
                         Convert.FromHexString(token)))
                 {
-                    return Failure("INVALID IPC RESPONSE", "The elevated response token did not match.");
+                    return Failure(
+                        Text.Get("elevation.invalidResponse"),
+                        Text.Get("elevation.tokenMismatch"));
                 }
 
                 return envelope.Result;
@@ -135,13 +145,13 @@ public static class ElevationIpc
             catch (OperationCanceledException)
             {
                 return Failure(
-                    "OPERATION TIMEOUT",
-                    $"The elevated process did not finish within {timeout.TotalSeconds:0} seconds.",
-                    "The operation may still be finishing in the elevated process; check status before retrying.");
+                    Text.Get("elevation.timeout"),
+                    Text.Format("elevation.timeoutDetail", timeout.TotalSeconds),
+                    Text.Get("elevation.timeoutHint"));
             }
             catch (Exception ex)
             {
-                return Failure("IPC FAILED", ex.Message);
+                return Failure(Text.Get("elevation.ipcFailed"), ex.Message);
             }
         }
     }
@@ -150,7 +160,7 @@ public static class ElevationIpc
     {
         var payload = JsonSerializer.SerializeToUtf8Bytes(envelope);
         if (payload.Length > MaxResponseBytes)
-            throw new InvalidDataException("IPC response is too large.");
+            throw new InvalidDataException(Text.Get("elevation.responseTooLarge"));
 
         Span<byte> length = stackalloc byte[sizeof(int)];
         BinaryPrimitives.WriteInt32LittleEndian(length, payload.Length);
@@ -168,13 +178,16 @@ public static class ElevationIpc
         var length = BinaryPrimitives.ReadInt32LittleEndian(lengthBytes);
 
         if (length is <= 0 or > MaxResponseBytes)
-            throw new InvalidDataException($"Invalid IPC response length: {length}.");
+        {
+            throw new InvalidDataException(
+                Text.Format("elevation.invalidResponseLength", length));
+        }
 
         var payload = new byte[length];
         await stream.ReadExactlyAsync(payload, cancellationToken).ConfigureAwait(false);
 
         return JsonSerializer.Deserialize<PipeEnvelope>(payload)
-               ?? throw new InvalidDataException("The elevated process returned an empty response.");
+               ?? throw new InvalidDataException(Text.Get("elevation.emptyResponse"));
     }
 
     private static ElevatedResult Failure(string title, params string[] lines)

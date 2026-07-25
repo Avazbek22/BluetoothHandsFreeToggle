@@ -1,3 +1,5 @@
+using System.Globalization;
+using BluetoothHandsFreeToggle.Localization;
 using BluetoothHandsFreeToggle.Windows;
 
 namespace BluetoothHandsFreeToggle.Core;
@@ -41,89 +43,123 @@ public sealed class ToggleEngine
         }
         else if (backup.Found)
         {
-            lines.Add($"Hard-mode backup: available ({backup.Backup!.CreatedUtc.LocalDateTime:G})");
+            lines.Add(Text.Format(
+                "status.backupAvailable",
+                backup.Backup!.CreatedUtc.LocalDateTime.ToString(
+                    "G",
+                    CultureInfo.CurrentCulture)));
         }
         else
         {
-            lines.Add("Hard-mode backup: not present");
+            lines.Add(Text.Get("status.backupMissing"));
         }
 
-        return BuildReport("STATUS", "STATUS WITH ERRORS", snapshots, lines, errors);
+        return BuildReport(
+            Text.Get("title.status"),
+            Text.Get("title.statusWithErrors"),
+            snapshots,
+            lines,
+            errors);
     }
 
     public ToggleReport SoftResetHandsFree()
-        => RunExclusive("SOFT RESET FAILED", SoftResetCore);
+        => RunExclusive(Text.Get("title.softFailed"), SoftResetCore);
 
     public ToggleReport HardDisableHandsFree()
-        => RunExclusive("HARD MODE FAILED", HardDisableCore);
+        => RunExclusive(Text.Get("title.hardFailed"), HardDisableCore);
 
     public ToggleReport RestoreHandsFree()
-        => RunExclusive("RESTORE FAILED", RestoreCore);
+        => RunExclusive(Text.Get("title.restoreFailed"), RestoreCore);
 
     private ToggleReport SoftResetCore()
     {
         var before = GetSnapshots();
         var lines = new List<string>
         {
-            "Soft mode: restarting active HFP services.",
-            "Startup configuration is not changed; the Bluetooth microphone remains available.",
-            "Close applications that are actively using the headset microphone before running Soft mode."
+            Text.Get("soft.intro"),
+            Text.Get("soft.preserveMicrophone"),
+            Text.Get("soft.closeMicrophoneApps")
         };
         var errors = new List<string>();
         var warnings = new List<string>();
 
         AddQueryErrors(before, errors);
         if (errors.Count > 0)
-            return BuildReport("SOFT RESET COMPLETE", "SOFT RESET FAILED", before, lines, errors, warnings);
+            return BuildReport(
+                Text.Get("title.softComplete"),
+                Text.Get("title.softFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
 
         var present = before.Where(snapshot => snapshot.Exists).ToList();
         if (present.Count == 0)
         {
-            errors.Add("No supported HFP service was found on this system.");
-            return BuildReport("SOFT RESET COMPLETE", "SOFT RESET FAILED", before, lines, errors, warnings);
+            errors.Add(Text.Get("service.noneFound"));
+            return BuildReport(
+                Text.Get("title.softComplete"),
+                Text.Get("title.softFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
         }
 
         foreach (var snapshot in present)
         {
             if (snapshot.StartType is ServiceStartType.Disabled)
             {
-                errors.Add(
-                    $"{snapshot.FriendlyName}: startup is Disabled; use Restore before Soft mode.");
+                errors.Add(Text.Format(
+                    "soft.disabledUseRestore",
+                    snapshot.FriendlyName));
                 continue;
             }
 
             if (snapshot.RunState is ServiceRunState.Stopped)
             {
-                lines.Add($"[OK] {snapshot.FriendlyName}: already stopped; startup configuration preserved.");
+                lines.Add(Text.Format("soft.alreadyStopped", snapshot.FriendlyName));
                 continue;
             }
 
             if (snapshot.RunState is ServiceRunState.Unknown)
             {
-                errors.Add($"{snapshot.FriendlyName}: current run state is unknown.");
+                errors.Add(Text.Format("service.stateUnknown", snapshot.FriendlyName));
                 continue;
             }
 
             if (!_services.TryStopService(snapshot.ServiceName, ServiceTimeout, out var stopError))
             {
-                errors.Add($"{snapshot.FriendlyName}: stop failed: {stopError}");
+                errors.Add(Text.Format(
+                    "service.stopFailed",
+                    snapshot.FriendlyName,
+                    stopError));
                 continue;
             }
 
             if (!_services.TryStartService(snapshot.ServiceName, ServiceTimeout, out var startError))
             {
-                errors.Add($"{snapshot.FriendlyName}: restart failed: {startError}");
+                errors.Add(Text.Format(
+                    "soft.restartFailed",
+                    snapshot.FriendlyName,
+                    startError));
                 continue;
             }
 
-            lines.Add($"[OK] {snapshot.FriendlyName}: restarted.");
+            lines.Add(Text.Format("soft.restarted", snapshot.FriendlyName));
         }
 
         var after = GetSnapshots();
         AddQueryErrors(after, errors);
         VerifySoftResult(before, after, errors);
 
-        return BuildReport("SOFT RESET COMPLETE", "SOFT RESET PARTIALLY FAILED", after, lines, errors, warnings);
+        return BuildReport(
+            Text.Get("title.softComplete"),
+            Text.Get("title.softPartial"),
+            after,
+            lines,
+            errors,
+            warnings);
     }
 
     private ToggleReport HardDisableCore()
@@ -131,33 +167,51 @@ public sealed class ToggleEngine
         var before = GetSnapshots();
         var lines = new List<string>
         {
-            "Hard mode: disabling HFP services to force high-quality playback.",
-            "The Bluetooth headset microphone will be unavailable until Restore is used."
+            Text.Get("hard.intro"),
+            Text.Get("hard.microphoneUnavailable")
         };
         var errors = new List<string>();
         var warnings = new List<string>();
 
         AddQueryErrors(before, errors);
         if (errors.Count > 0)
-            return BuildReport("HARD MODE COMPLETE", "HARD MODE FAILED", before, lines, errors, warnings);
+            return BuildReport(
+                Text.Get("title.hardComplete"),
+                Text.Get("title.hardFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
 
         if (before.All(snapshot => !snapshot.Exists))
         {
-            errors.Add("No supported HFP service was found on this system.");
-            return BuildReport("HARD MODE COMPLETE", "HARD MODE FAILED", before, lines, errors, warnings);
+            errors.Add(Text.Get("service.noneFound"));
+            return BuildReport(
+                Text.Get("title.hardComplete"),
+                Text.Get("title.hardFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
         }
 
         var backup = _backup.Load();
         if (!backup.Success)
         {
             errors.Add(backup.Error!);
-            errors.Add("No service configuration was changed.");
-            return BuildReport("HARD MODE COMPLETE", "HARD MODE FAILED", before, lines, errors, warnings);
+            errors.Add(Text.Get("hard.noConfigurationChanged"));
+            return BuildReport(
+                Text.Get("title.hardComplete"),
+                Text.Get("title.hardFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
         }
 
         if (backup.Found)
         {
-            lines.Add($"[OK] Existing original-state backup preserved: {_backup.BackupPath}");
+            lines.Add(Text.Format("hard.existingBackup", _backup.BackupPath));
         }
         else
         {
@@ -165,35 +219,53 @@ public sealed class ToggleEngine
             if (!save.Success)
             {
                 errors.Add(save.Error!);
-                errors.Add("No service configuration was changed because a safe backup could not be created.");
-                return BuildReport("HARD MODE COMPLETE", "HARD MODE FAILED", before, lines, errors, warnings);
+                errors.Add(Text.Get("hard.noConfigurationChangedNoBackup"));
+                return BuildReport(
+                    Text.Get("title.hardComplete"),
+                    Text.Get("title.hardFailed"),
+                    before,
+                    lines,
+                    errors,
+                    warnings);
             }
 
-            lines.Add($"[OK] Original state saved: {_backup.BackupPath}");
+            lines.Add(Text.Format("hard.originalSaved", _backup.BackupPath));
         }
 
         foreach (var snapshot in before.Where(snapshot => snapshot.Exists))
         {
             if (!_services.TryStopService(snapshot.ServiceName, ServiceTimeout, out var stopError))
-                errors.Add($"{snapshot.FriendlyName}: stop failed: {stopError}");
+                errors.Add(Text.Format(
+                    "service.stopFailed",
+                    snapshot.FriendlyName,
+                    stopError));
 
             if (!_services.TrySetStartType(
                     snapshot.ServiceName,
                     ServiceStartType.Disabled,
                     out var startupError))
             {
-                errors.Add($"{snapshot.FriendlyName}: disabling startup failed: {startupError}");
+                errors.Add(Text.Format(
+                    "service.disableStartupFailed",
+                    snapshot.FriendlyName,
+                    startupError));
                 continue;
             }
 
-            lines.Add($"[OK] {snapshot.FriendlyName}: startup disabled.");
+            lines.Add(Text.Format("service.startupDisabled", snapshot.FriendlyName));
         }
 
         var after = GetSnapshots();
         AddQueryErrors(after, errors);
         VerifyHardResult(after, errors);
 
-        return BuildReport("HARD MODE COMPLETE", "HARD MODE PARTIALLY FAILED", after, lines, errors, warnings);
+        return BuildReport(
+            Text.Get("title.hardComplete"),
+            Text.Get("title.hardPartial"),
+            after,
+            lines,
+            errors,
+            warnings);
     }
 
     private ToggleReport RestoreCore()
@@ -201,36 +273,54 @@ public sealed class ToggleEngine
         var before = GetSnapshots();
         var lines = new List<string>
         {
-            "Restore mode: enabling HFP and restoring the saved service state."
+            Text.Get("restore.intro")
         };
         var errors = new List<string>();
         var warnings = new List<string>();
 
         AddQueryErrors(before, errors);
         if (errors.Count > 0)
-            return BuildReport("RESTORE COMPLETE", "RESTORE FAILED", before, lines, errors, warnings);
+            return BuildReport(
+                Text.Get("title.restoreComplete"),
+                Text.Get("title.restoreFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
 
         if (before.All(snapshot => !snapshot.Exists))
         {
-            errors.Add("No supported HFP service was found on this system.");
-            return BuildReport("RESTORE COMPLETE", "RESTORE FAILED", before, lines, errors, warnings);
+            errors.Add(Text.Get("service.noneFound"));
+            return BuildReport(
+                Text.Get("title.restoreComplete"),
+                Text.Get("title.restoreFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
         }
 
         var load = _backup.Load();
         if (!load.Success)
         {
             errors.Add(load.Error!);
-            errors.Add("Restore stopped to avoid replacing an unreadable original-state backup.");
-            return BuildReport("RESTORE COMPLETE", "RESTORE FAILED", before, lines, errors, warnings);
+            errors.Add(Text.Get("restore.unreadableBackup"));
+            return BuildReport(
+                Text.Get("title.restoreComplete"),
+                Text.Get("title.restoreFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
         }
 
         if (!load.Found)
         {
-            warnings.Add("Original-state backup is missing; safe defaults (Manual + Running) will be used.");
+            warnings.Add(Text.Get("restore.missingBackup"));
         }
         else
         {
-            lines.Add($"[OK] Loaded original state from {_backup.BackupPath}");
+            lines.Add(Text.Format("restore.loaded", _backup.BackupPath));
         }
 
         var desiredStates = new Dictionary<string, DesiredServiceState>(StringComparer.OrdinalIgnoreCase);
@@ -242,7 +332,10 @@ public sealed class ToggleEngine
 
             if (!_services.TrySetStartType(snapshot.ServiceName, desired.StartType, out var startupError))
             {
-                errors.Add($"{snapshot.FriendlyName}: restoring startup failed: {startupError}");
+                errors.Add(Text.Format(
+                    "restore.startupFailed",
+                    snapshot.FriendlyName,
+                    startupError));
                 continue;
             }
 
@@ -252,14 +345,25 @@ public sealed class ToggleEngine
 
             if (!runStateChanged)
             {
-                var action = desired.ShouldRun ? "start" : "stop";
-                errors.Add($"{snapshot.FriendlyName}: {action} failed: {runError}");
+                var action = Text.Get(desired.ShouldRun
+                    ? "restore.actionStart"
+                    : "restore.actionStop");
+                errors.Add(Text.Format(
+                    "restore.actionFailed",
+                    snapshot.FriendlyName,
+                    action,
+                    runError));
                 continue;
             }
 
-            var stateText = desired.ShouldRun ? "Running" : "Stopped";
-            lines.Add(
-                $"[OK] {snapshot.FriendlyName}: startup={desired.StartType}, state={stateText}.");
+            var stateText = ServiceStateText.Get(desired.ShouldRun
+                ? ServiceRunState.Running
+                : ServiceRunState.Stopped);
+            lines.Add(Text.Format(
+                "restore.stateRestored",
+                snapshot.FriendlyName,
+                ServiceStateText.Get(desired.StartType),
+                stateText));
         }
 
         var after = GetSnapshots();
@@ -272,10 +376,16 @@ public sealed class ToggleEngine
             if (!delete.Success)
                 errors.Add(delete.Error!);
             else
-                lines.Add("[OK] Original-state backup removed after successful restore.");
+                lines.Add(Text.Get("restore.backupRemoved"));
         }
 
-        return BuildReport("RESTORE COMPLETE", "RESTORE PARTIALLY FAILED", after, lines, errors, warnings);
+        return BuildReport(
+            Text.Get("title.restoreComplete"),
+            Text.Get("title.restorePartial"),
+            after,
+            lines,
+            errors,
+            warnings);
     }
 
     private ToggleReport RunExclusive(string failureTitle, Func<ToggleReport> operation)
@@ -300,14 +410,16 @@ public sealed class ToggleEngine
             {
                 return ToggleReport.Failed(
                     failureTitle,
-                    ["Another BluetoothHandsFreeToggle operation is already running."]);
+                    [Text.Get("operation.alreadyRunning")]);
             }
 
             return operation();
         }
         catch (Exception ex)
         {
-            return ToggleReport.Failed(failureTitle, [$"Unexpected error: {ex}"]);
+            return ToggleReport.Failed(
+                failureTitle,
+                [Text.Format("operation.unexpectedError", ex)]);
         }
         finally
         {
@@ -353,9 +465,9 @@ public sealed class ToggleEngine
 
         if (!original.Exists)
         {
-            warnings.Add(
-                $"{current.FriendlyName}: the service was absent when the backup was created; " +
-                "Manual + Running recovery defaults will be used.");
+            warnings.Add(Text.Format(
+                "restore.serviceOriginallyAbsent",
+                current.FriendlyName));
             return new DesiredServiceState(ServiceStartType.Manual, ShouldRun: true);
         }
 
@@ -368,8 +480,10 @@ public sealed class ToggleEngine
 
         if (startType != original.StartType)
         {
-            warnings.Add(
-                $"{current.FriendlyName}: backup startup value {original.StartType} is not restorable; Manual will be used.");
+            warnings.Add(Text.Format(
+                "restore.startupNotRestorable",
+                current.FriendlyName,
+                ServiceStateText.Get(original.StartType)));
         }
 
         var shouldRun = original.RunState is
@@ -396,8 +510,11 @@ public sealed class ToggleEngine
 
             if (current.StartType != original.StartType)
             {
-                errors.Add(
-                    $"{original.FriendlyName}: Soft mode unexpectedly changed startup from {original.StartType} to {current.StartType}.");
+                errors.Add(Text.Format(
+                    "verify.softStartupChanged",
+                    original.FriendlyName,
+                    ServiceStateText.Get(original.StartType),
+                    ServiceStateText.Get(current.StartType)));
             }
 
             var wasActive = original.RunState is not ServiceRunState.Stopped;
@@ -405,7 +522,10 @@ public sealed class ToggleEngine
                 original.StartType is not ServiceStartType.Disabled &&
                 current.RunState is not ServiceRunState.Running)
             {
-                errors.Add($"{original.FriendlyName}: expected Running after Soft mode, got {current.RunState}.");
+                errors.Add(Text.Format(
+                    "verify.softExpectedRunning",
+                    original.FriendlyName,
+                    ServiceStateText.Get(current.RunState)));
             }
         }
     }
@@ -417,10 +537,16 @@ public sealed class ToggleEngine
         foreach (var snapshot in after.Where(snapshot => snapshot.Exists && snapshot.QuerySucceeded))
         {
             if (snapshot.StartType is not ServiceStartType.Disabled)
-                errors.Add($"{snapshot.FriendlyName}: expected Disabled startup, got {snapshot.StartType}.");
+                errors.Add(Text.Format(
+                    "verify.hardExpectedDisabled",
+                    snapshot.FriendlyName,
+                    ServiceStateText.Get(snapshot.StartType)));
 
             if (snapshot.RunState is not ServiceRunState.Stopped)
-                errors.Add($"{snapshot.FriendlyName}: expected Stopped state, got {snapshot.RunState}.");
+                errors.Add(Text.Format(
+                    "verify.hardExpectedStopped",
+                    snapshot.FriendlyName,
+                    ServiceStateText.Get(snapshot.RunState)));
         }
     }
 
@@ -436,8 +562,11 @@ public sealed class ToggleEngine
 
             if (snapshot.StartType != desired.StartType)
             {
-                errors.Add(
-                    $"{snapshot.FriendlyName}: expected {desired.StartType} startup, got {snapshot.StartType}.");
+                errors.Add(Text.Format(
+                    "verify.restoreExpectedStartup",
+                    snapshot.FriendlyName,
+                    ServiceStateText.Get(desired.StartType),
+                    ServiceStateText.Get(snapshot.StartType)));
             }
 
             var expectedRunState = desired.ShouldRun
@@ -446,8 +575,11 @@ public sealed class ToggleEngine
 
             if (snapshot.RunState != expectedRunState)
             {
-                errors.Add(
-                    $"{snapshot.FriendlyName}: expected {expectedRunState} state, got {snapshot.RunState}.");
+                errors.Add(Text.Format(
+                    "verify.restoreExpectedState",
+                    snapshot.FriendlyName,
+                    ServiceStateText.Get(expectedRunState),
+                    ServiceStateText.Get(snapshot.RunState)));
             }
         }
     }
@@ -458,8 +590,10 @@ public sealed class ToggleEngine
     {
         foreach (var snapshot in snapshots.Where(snapshot => !snapshot.QuerySucceeded))
         {
-            errors.Add(
-                $"{snapshot.FriendlyName}: status query failed: {snapshot.Note ?? "unknown error"}");
+            errors.Add(Text.Format(
+                "service.statusQueryFailed",
+                snapshot.FriendlyName,
+                snapshot.Note ?? Text.Get("service.unknownError")));
         }
     }
 
@@ -505,17 +639,28 @@ public sealed record ToggleReport(
         if (Snapshots.Count > 0)
         {
             output.Add("");
-            output.Add("Components:");
+            output.Add(Text.Get("report.components"));
             foreach (var snapshot in Snapshots)
             {
-                var exists = snapshot.Exists ? "Yes" : "No";
-                var nativeStart = snapshot.NativeStartValue?.ToString() ?? "-";
+                var exists = snapshot.Exists
+                    ? Text.Get("common.yes")
+                    : Text.Get("common.no");
+                var nativeStart = snapshot.NativeStartValue?.ToString(
+                    CultureInfo.InvariantCulture) ?? "-";
                 var note = string.IsNullOrWhiteSpace(snapshot.Note) ? "" : $" ({snapshot.Note})";
-                var techId = snapshot.Exists ? $" [TechId: {snapshot.ServiceName}]" : "";
+                var techId = snapshot.Exists
+                    ? Text.Format("report.techId", snapshot.ServiceName)
+                    : "";
 
-                output.Add(
-                    $"- {snapshot.FriendlyName}: Exists={exists} | State={snapshot.RunState} | " +
-                    $"Startup={snapshot.StartType} | StartCode={nativeStart}{techId}{note}");
+                output.Add(Text.Format(
+                    "report.componentLine",
+                    snapshot.FriendlyName,
+                    exists,
+                    ServiceStateText.Get(snapshot.RunState),
+                    ServiceStateText.Get(snapshot.StartType),
+                    nativeStart,
+                    techId,
+                    note));
             }
         }
 

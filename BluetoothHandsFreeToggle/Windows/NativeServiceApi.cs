@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Windows;
 
@@ -195,6 +196,9 @@ internal static class NativeServiceApi
     }
 
     private static string FormatWin32Error(string operation, int errorCode)
-        => $"{operation} failed with Win32 error {errorCode}: " +
-           new System.ComponentModel.Win32Exception(errorCode).Message;
+        => Text.Format(
+            "service.nativeOperationFailed",
+            operation,
+            errorCode,
+            new System.ComponentModel.Win32Exception(errorCode).Message);
 }

@@ -1,4 +1,5 @@
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.App;
 
@@ -19,9 +20,15 @@ public sealed class CommandLine(string[] arguments)
         if (args[0].Equals("--elevated", StringComparison.OrdinalIgnoreCase))
             return HandleElevatedChild(appInfo, args);
 
+        if (args[0].Equals("language", StringComparison.OrdinalIgnoreCase) ||
+            args[0].Equals("lang", StringComparison.OrdinalIgnoreCase))
+        {
+            return HandleLanguageCommand(args);
+        }
+
         if (args.Length != 1)
         {
-            WriteUsageError("Commands do not accept additional arguments.");
+            WriteUsageError(Text.Get("cli.extraArguments"));
             return true;
         }
 
@@ -34,7 +41,7 @@ public sealed class CommandLine(string[] arguments)
 
         if (command is not ("status" or "soft" or "hard" or "restore" or "disable" or "enable"))
         {
-            WriteUsageError($"Unknown command: {args[0]}");
+            WriteUsageError(Text.Format("cli.unknownCommand", args[0]));
             return true;
         }
 
@@ -82,7 +89,7 @@ public sealed class CommandLine(string[] arguments)
             string.IsNullOrWhiteSpace(token) ||
             action is not ("soft" or "hard" or "restore"))
         {
-            Console.Error.WriteLine("Invalid elevated-child arguments.");
+            Console.Error.WriteLine(Text.Get("cli.invalidElevatedArguments"));
             Environment.ExitCode = 2;
             return true;
         }
@@ -91,8 +98,8 @@ public sealed class CommandLine(string[] arguments)
         {
             var notElevated = new ElevationIpc.ElevatedResult(
                 false,
-                "NOT ELEVATED",
-                ["The child process is not running as Administrator.", "No changes were made."]);
+                Text.Get("cli.notElevatedTitle"),
+                [Text.Get("cli.notElevated"), Text.Get("cli.noChanges")]);
 
             Environment.ExitCode = ElevationIpc.RunAsElevatedChildAndReply(
                 pipeName,
@@ -122,8 +129,30 @@ public sealed class CommandLine(string[] arguments)
             "soft" => engine.SoftResetHandsFree(),
             "hard" => engine.HardDisableHandsFree(),
             "restore" => engine.RestoreHandsFree(),
-            _ => ToggleReport.Failed("INVALID ACTION", [$"Unsupported action: {action}"])
+            _ => ToggleReport.Failed(
+                Text.Get("title.invalidAction"),
+                [Text.Format("cli.unsupportedAction", action)])
         };
+
+    private static bool HandleLanguageCommand(string[] args)
+    {
+        if (args.Length != 2)
+        {
+            WriteUsageError(Text.Get("cli.languageUsage"));
+            return true;
+        }
+
+        if (!AppLanguageCode.TryParse(args[1], out var language))
+        {
+            WriteUsageError(Text.Format("cli.invalidLanguage", args[1]));
+            return true;
+        }
+
+        Text.SetLanguage(language);
+        Console.WriteLine(Text.Get("cli.languageChanged"));
+        Environment.ExitCode = 0;
+        return true;
+    }
 
     private static void PrintReport(ToggleReport report)
     {
@@ -145,33 +174,32 @@ public sealed class CommandLine(string[] arguments)
     private static void WriteUsageError(string message)
     {
         Console.Error.WriteLine(message);
-        Console.Error.WriteLine("Run with --help to see supported commands.");
+        Console.Error.WriteLine(Text.Get("cli.runHelp"));
         Environment.ExitCode = 2;
     }
 
     private static void WriteHelp()
     {
-        Console.WriteLine(
-            """
-            BluetoothHandsFreeToggle
-
-            Usage:
-              BluetoothHandsFreeToggle status
-              BluetoothHandsFreeToggle soft
-              BluetoothHandsFreeToggle hard
-              BluetoothHandsFreeToggle restore
-
-            Commands:
-              status   Show HFP service and backup state. Does not require Administrator.
-              soft     Restart active HFP services without changing startup configuration.
-                       This can clear a stuck HFP session while keeping the microphone available.
-              hard     Stop and disable HFP services to force high-quality playback.
-                       The Bluetooth microphone is unavailable until restore is used.
-              restore  Restore the startup and running state saved by hard mode.
-
-            Backward-compatible aliases:
-              disable = hard
-              enable  = restore
-            """);
+        Console.WriteLine(AppInfo.AppName);
+        Console.WriteLine();
+        Console.WriteLine(Text.Get("cli.help.usage"));
+        Console.WriteLine("  BluetoothHandsFreeToggle status");
+        Console.WriteLine("  BluetoothHandsFreeToggle soft");
+        Console.WriteLine("  BluetoothHandsFreeToggle hard");
+        Console.WriteLine("  BluetoothHandsFreeToggle restore");
+        Console.WriteLine("  BluetoothHandsFreeToggle language <en|ru>");
+        Console.WriteLine();
+        Console.WriteLine(Text.Get("cli.help.commands"));
+        Console.WriteLine(Text.Get("cli.help.status"));
+        Console.WriteLine(Text.Get("cli.help.soft"));
+        Console.WriteLine(Text.Get("cli.help.softDetail"));
+        Console.WriteLine(Text.Get("cli.help.hard"));
+        Console.WriteLine(Text.Get("cli.help.hardDetail"));
+        Console.WriteLine(Text.Get("cli.help.restore"));
+        Console.WriteLine(Text.Get("cli.help.language"));
+        Console.WriteLine();
+        Console.WriteLine(Text.Get("cli.help.aliases"));
+        Console.WriteLine(Text.Get("cli.help.aliasDisable"));
+        Console.WriteLine(Text.Get("cli.help.aliasEnable"));
     }
 }

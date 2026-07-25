@@ -1,4 +1,6 @@
+using System.Globalization;
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Ui;
 
@@ -10,17 +12,28 @@ public static class ConsoleTable
         {
             snapshot.FriendlyName,
             PresenceText(snapshot),
-            snapshot.Exists ? snapshot.RunState.ToString() : "-",
-            snapshot.Exists ? snapshot.StartType.ToString() : "-",
-            snapshot.NativeStartValue?.ToString() ?? "-"
+            snapshot.Exists ? ServiceStateText.Get(snapshot.RunState) : "-",
+            snapshot.Exists ? ServiceStateText.Get(snapshot.StartType) : "-",
+            snapshot.NativeStartValue?.ToString(CultureInfo.InvariantCulture) ?? "-"
         }).ToList();
 
-        var headers = new[] { "Component", "Present", "State", "Startup", "StartCode" };
+        var headers = new[]
+        {
+            Text.Get("table.component"),
+            Text.Get("table.present"),
+            Text.Get("table.state"),
+            Text.Get("table.startup"),
+            Text.Get("table.startCode")
+        };
         PrintTable(headers, rows);
     }
 
     private static string PresenceText(ServiceSnapshot snapshot)
-        => !snapshot.QuerySucceeded ? "Error" : snapshot.Exists ? "Yes" : "No";
+        => !snapshot.QuerySucceeded
+            ? Text.Get("common.error")
+            : snapshot.Exists
+                ? Text.Get("common.yes")
+                : Text.Get("common.no");
 
     private static void PrintTable(string[] headers, List<string[]> rows)
     {

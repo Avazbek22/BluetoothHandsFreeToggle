@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BluetoothHandsFreeToggle.Localization;
 using BluetoothHandsFreeToggle.Windows;
 
 namespace BluetoothHandsFreeToggle.Core;
@@ -39,13 +40,14 @@ public sealed class BackupStore : IBackupStore
             var json = File.ReadAllText(BackupPath);
             var backup = JsonSerializer.Deserialize<BackupFile>(json, JsonOptions);
             if (backup is null)
-                return BackupLoadResult.Failed("Backup file is empty.");
+                return BackupLoadResult.Failed(Text.Get("backup.empty"));
 
             if (backup.SchemaVersion is < 0 or > CurrentSchemaVersion)
-                return BackupLoadResult.Failed($"Unsupported backup schema version: {backup.SchemaVersion}.");
+                return BackupLoadResult.Failed(
+                    Text.Format("backup.unsupportedSchema", backup.SchemaVersion));
 
             if (backup.Services is null)
-                return BackupLoadResult.Failed("Backup does not contain a services map.");
+                return BackupLoadResult.Failed(Text.Get("backup.missingServices"));
 
             var normalizedServices = new Dictionary<string, BackupServiceState>(
                 backup.Services,
@@ -55,7 +57,8 @@ public sealed class BackupStore : IBackupStore
         }
         catch (Exception ex)
         {
-            return BackupLoadResult.Failed($"Could not read backup '{BackupPath}': {ex.Message}");
+            return BackupLoadResult.Failed(
+                Text.Format("backup.readFailed", BackupPath, ex.Message));
         }
     }
 
@@ -84,7 +87,8 @@ public sealed class BackupStore : IBackupStore
         }
         catch (Exception ex)
         {
-            return BackupWriteResult.Failed($"Could not save backup '{BackupPath}': {ex.Message}");
+            return BackupWriteResult.Failed(
+                Text.Format("backup.saveFailed", BackupPath, ex.Message));
         }
         finally
         {
@@ -113,7 +117,8 @@ public sealed class BackupStore : IBackupStore
         }
         catch (Exception ex)
         {
-            return BackupWriteResult.Failed($"Could not delete backup '{BackupPath}': {ex.Message}");
+            return BackupWriteResult.Failed(
+                Text.Format("backup.deleteFailed", BackupPath, ex.Message));
         }
     }
 }

@@ -49,8 +49,19 @@ On Windows 11, A2DP and HFP audio endpoints are unified and Windows selects HFP 
    - `[2]` Soft reset
    - `[3]` Hard mode
    - `[4]` Restore
+   - `[5]` Help
+   - `[6]` About
+   - `[7]` Change language
 
 Hard mode displays an additional warning before disabling HFP.
+
+The interface automatically selects Russian when the Windows UI or regional
+culture is Russian; otherwise it uses English. A language selected from the
+menu is remembered in:
+
+```text
+%AppData%\BluetoothHandsFreeToggle\ui-settings.json
+```
 
 ## Command line
 
@@ -59,6 +70,8 @@ BluetoothHandsFreeToggle.exe status
 BluetoothHandsFreeToggle.exe soft
 BluetoothHandsFreeToggle.exe hard
 BluetoothHandsFreeToggle.exe restore
+BluetoothHandsFreeToggle.exe language en
+BluetoothHandsFreeToggle.exe language ru
 ```
 
 Backward-compatible aliases:
@@ -142,5 +155,7 @@ BluetoothHandsFreeToggle помогает вернуть нормальное к
 - **Soft reset** перезапускает активные HFP-службы, не меняет их автозапуск и сохраняет доступность микрофона.
 - **Hard mode** полностью отключает HFP ради приоритета качества воспроизведения; Bluetooth-микрофон не работает до Restore.
 - **Restore** возвращает сохранённые настройки и исходное состояние служб.
+- Язык определяется по настройкам Windows и переключается пунктом `[7]`; выбор сохраняется между запусками.
+- Встроенная справка `[5]` объясняет режимы, ограничения Bluetooth Classic и порядок восстановления.
 
 Важно: при активном Bluetooth Classic микрофоне одновременно сохранить A2DP-качество технически невозможно. Soft mode предназначен для сброса ошибочно «залипшего» HFP, а Hard mode — для гарантированного исключения HFP.
