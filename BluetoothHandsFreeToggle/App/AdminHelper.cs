@@ -1,10 +1,13 @@
-﻿using System.Diagnostics;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Security.Principal;
 
 namespace BluetoothHandsFreeToggle.App;
 
 public static class AdminHelper
 {
+    private const int ErrorCancelled = 1223;
+
     public static bool IsAdministrator()
     {
         try
@@ -19,46 +22,27 @@ public static class AdminHelper
         }
     }
 
-    public static bool TryRelaunchAsAdministrator(string exePath, string[] args)
+    public static bool TryRelaunchAsAdministrator(string executablePath)
     {
         try
         {
-            var psi = new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
-                FileName = exePath,
-                Arguments = BuildArgs(args),
+                FileName = executablePath,
                 UseShellExecute = true,
                 Verb = "runas"
             };
 
-            Process.Start(psi);
-            return true;
+            using var process = Process.Start(startInfo);
+            return process is not null;
         }
-        catch (System.ComponentModel.Win32Exception)
+        catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {
-            // User cancelled UAC.
             return false;
         }
         catch
         {
             return false;
         }
-    }
-
-    private static string BuildArgs(string[] args)
-    {
-        if (args.Length == 0) return string.Empty;
-        return string.Join(" ", args.Select(QuoteIfNeeded));
-    }
-
-    private static string QuoteIfNeeded(string s)
-    {
-        if (string.IsNullOrWhiteSpace(s))
-            return "\"\"";
-
-        if (s.Any(char.IsWhiteSpace) || s.Contains('"'))
-            return "\"" + s.Replace("\"", "\\\"") + "\"";
-
-        return s;
     }
 }

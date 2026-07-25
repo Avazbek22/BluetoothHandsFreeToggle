@@ -1,5 +1,7 @@
 ﻿namespace BluetoothHandsFreeToggle.Ui;
 
+using BluetoothHandsFreeToggle.Localization;
+
 public static class ConsoleHelpers
 {
     public static void WriteHeader(string text)
@@ -7,7 +9,7 @@ public static class ConsoleHelpers
         WithColor(ConsoleColor.Cyan, () =>
         {
             Console.WriteLine(text);
-            Console.WriteLine("\r\nDeveloped by Avazbek22");
+            Console.WriteLine($"\r\n{Text.Get("common.developedBy")}");
             Console.WriteLine(new string('=', Math.Max(10, text.Length)) + "\r\n");
         });
     }
@@ -25,16 +27,33 @@ public static class ConsoleHelpers
         finally { Console.ForegroundColor = old; }
     }
 
-    public static void Pause(string message = "Press any key to continue...")
+    public static void Pause(string? message = null)
     {
+        if (Console.IsInputRedirected)
+            return;
+
         Console.WriteLine();
-        WithColor(ConsoleColor.DarkGray, () => Console.WriteLine(message));
+        WithColor(
+            ConsoleColor.DarkGray,
+            () => Console.WriteLine(message ?? Text.Get("common.pressAnyKey")));
         Console.ReadKey(true);
     }
 
     public static string ReadMenuChoice()
     {
-        Console.Write("Select: ");
+        Console.Write(Text.Get("common.select"));
         return (Console.ReadLine() ?? "").Trim();
+    }
+
+    public static void TryClearScreen()
+    {
+        try
+        {
+            Console.Clear();
+        }
+        catch (IOException)
+        {
+            // Some redirected and legacy console hosts do not support clearing.
+        }
     }
 }

@@ -1,4 +1,6 @@
-﻿using BluetoothHandsFreeToggle.Core;
+using System.Globalization;
+using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Ui;
 
@@ -6,43 +8,57 @@ public static class ConsoleTable
 {
     public static void PrintStatusTable(IEnumerable<ServiceSnapshot> snapshots)
     {
-        var rows = snapshots.Select(s => new[]
+        var rows = snapshots.Select(snapshot => new[]
         {
-            s.FriendlyName,
-            s.Exists ? "Yes" : "No",
-            s.Exists ? s.RunState.ToString() : "-",
-            s.Exists ? s.StartType.ToString() : "-",
-            s.RegistryStartValue?.ToString() ?? "-",
+            snapshot.FriendlyName,
+            PresenceText(snapshot),
+            snapshot.Exists ? ServiceStateText.Get(snapshot.RunState) : "-",
+            snapshot.Exists ? ServiceStateText.Get(snapshot.StartType) : "-",
+            snapshot.NativeStartValue?.ToString(CultureInfo.InvariantCulture) ?? "-"
         }).ToList();
 
-        var headers = new[] { "Component", "Present", "State", "Startup", "RegStart" };
+        var headers = new[]
+        {
+            Text.Get("table.component"),
+            Text.Get("table.present"),
+            Text.Get("table.state"),
+            Text.Get("table.startup"),
+            Text.Get("table.startCode")
+        };
         PrintTable(headers, rows);
     }
+
+    private static string PresenceText(ServiceSnapshot snapshot)
+        => !snapshot.QuerySucceeded
+            ? Text.Get("common.error")
+            : snapshot.Exists
+                ? Text.Get("common.yes")
+                : Text.Get("common.no");
 
     private static void PrintTable(string[] headers, List<string[]> rows)
     {
         var widths = new int[headers.Length];
-        for (var i = 0; i < headers.Length; i++)
-            widths[i] = headers[i].Length;
+        for (var index = 0; index < headers.Length; index++)
+            widths[index] = headers[index].Length;
 
-        foreach (var r in rows)
+        foreach (var row in rows)
         {
-            for (var i = 0; i < r.Length; i++)
-                widths[i] = Math.Max(widths[i], r[i]?.Length ?? 0);
+            for (var index = 0; index < row.Length; index++)
+                widths[index] = Math.Max(widths[index], row[index].Length);
         }
 
-        string Line(string[] cols)
-        {
-            return string.Join("  ", cols.Select((c, i) => (c ?? "").PadRight(widths[i])));
-        }
+        string FormatLine(string[] columns)
+            => string.Join(
+                "  ",
+                columns.Select((column, index) => column.PadRight(widths[index])));
 
         ConsoleHelpers.WithColor(ConsoleColor.DarkCyan, () =>
         {
-            Console.WriteLine(Line(headers));
-            Console.WriteLine(string.Join("  ", widths.Select(w => new string('-', w))));
+            Console.WriteLine(FormatLine(headers));
+            Console.WriteLine(string.Join("  ", widths.Select(width => new string('-', width))));
         });
 
-        foreach (var r in rows)
-            Console.WriteLine(Line(r));
+        foreach (var row in rows)
+            Console.WriteLine(FormatLine(row));
     }
 }

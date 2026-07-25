@@ -1,203 +1,237 @@
-﻿using System.ServiceProcess;
+using System.ServiceProcess;
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.Windows;
 
-public sealed class WindowsServiceManager
+public sealed class WindowsServiceManager : IServiceManager
 {
-    public ServiceSnapshot GetSnapshot(string serviceName, string friendlyName, RegistryHelper registry)
-    {
-        var exists = ServiceExists(serviceName);
+    private const int ErrorServiceDoesNotExist = 1060;
 
-        if (!exists)
+    public ServiceSnapshot GetSnapshot(TargetService target)
+    {
+        var configRead = NativeServiceApi.TryGetStartType(
+            target.ServiceName,
+            out var nativeStartType,
+            out var nativeErrorCode,
+            out var configError);
+
+        if (!configRead)
         {
+            var notFound = nativeErrorCode == ErrorServiceDoesNotExist;
             return new ServiceSnapshot(
-                serviceName,
-                friendlyName,
+                target.ServiceName,
+                target.FriendlyName,
                 Exists: false,
-                RunState: ServiceRunState.NotPresent,
-                StartType: ServiceStartType.NotPresent,
-                RegistryStartValue: registry.TryGetRegistryStartValue(serviceName),
-                Note: null);
+                QuerySucceeded: notFound,
+                RunState: notFound ? ServiceRunState.NotPresent : ServiceRunState.Unknown,
+                StartType: notFound ? ServiceStartType.NotPresent : ServiceStartType.Unknown,
+                NativeStartValue: null,
+                Note: notFound ? null : configError);
         }
 
-        var runState = GetRunState(serviceName);
-        var startType = GetStartType(serviceName, out var stNote);
-
-        var reg = registry.TryGetRegistryStartValue(serviceName);
-        var note = stNote;
+        var runState = GetRunState(target.ServiceName, out var runStateError);
+        var startType = MapStartType(nativeStartType);
 
         return new ServiceSnapshot(
-            serviceName,
-            friendlyName,
+            target.ServiceName,
+            target.FriendlyName,
             Exists: true,
+            QuerySucceeded: runStateError is null,
             RunState: runState,
             StartType: startType,
-            RegistryStartValue: reg,
-            Note: note);
+            NativeStartValue: nativeStartType,
+            Note: runStateError);
     }
 
-    public bool TryStopService(string serviceName, TimeSpan timeout, out string? error)
+    public bool TryStopService(string serviceName, TimeSpan timeout, out string? errorMessage)
     {
-        error = null;
-
-        if (!ServiceExists(serviceName))
-            return true;
+        errorMessage = null;
 
         try
         {
-            using var sc = new ServiceController(serviceName);
+            using var controller = new ServiceController(serviceName);
+            controller.Refresh();
 
-            if (sc.Status is ServiceControllerStatus.Stopped)
+            if (controller.Status is ServiceControllerStatus.Stopped)
                 return true;
 
-            if (sc.Status is ServiceControllerStatus.StopPending)
+            if (controller.Status is ServiceControllerStatus.StopPending)
             {
-                sc.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+                controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
                 return true;
             }
 
-            sc.Stop();
-            sc.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+            controller.Stop();
+            controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
             return true;
+        }
+        catch (System.ServiceProcess.TimeoutException ex)
+        {
+            errorMessage = Text.Format(
+                "service.timeoutError",
+                timeout.TotalSeconds,
+                ex.Message);
+            return false;
         }
         catch (InvalidOperationException ex)
         {
-            error = "Stop failed: " + ex.Message;
+            errorMessage = ex.InnerException?.Message ?? ex.Message;
             return false;
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            error = "Stop failed: " + ex.Message;
+            errorMessage = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
             return false;
         }
         catch (Exception ex)
         {
-            error = "Stop failed: " + ex.Message;
+            errorMessage = ex.Message;
             return false;
         }
     }
 
-    public bool TryStartService(string serviceName, TimeSpan timeout, out string? error)
+    public bool TryStartService(string serviceName, TimeSpan timeout, out string? errorMessage)
     {
-        error = null;
-
-        if (!ServiceExists(serviceName))
-            return true;
+        errorMessage = null;
 
         try
         {
-            using var sc = new ServiceController(serviceName);
+            using var controller = new ServiceController(serviceName);
+            controller.Refresh();
 
-            if (sc.Status is ServiceControllerStatus.Running)
-                return true;
-
-            if (sc.Status is ServiceControllerStatus.StartPending)
+            switch (controller.Status)
             {
-                sc.WaitForStatus(ServiceControllerStatus.Running, timeout);
-                return true;
+                case ServiceControllerStatus.Running:
+                    return true;
+
+                case ServiceControllerStatus.StartPending:
+                case ServiceControllerStatus.ContinuePending:
+                    controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
+                    return true;
+
+                case ServiceControllerStatus.StopPending:
+                    controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+                    controller.Refresh();
+                    break;
+
+                case ServiceControllerStatus.Paused:
+                    controller.Continue();
+                    controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
+                    return true;
+
+                case ServiceControllerStatus.PausePending:
+                    controller.WaitForStatus(ServiceControllerStatus.Paused, timeout);
+                    controller.Continue();
+                    controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
+                    return true;
             }
 
-            sc.Start();
-            sc.WaitForStatus(ServiceControllerStatus.Running, timeout);
+            controller.Start();
+            controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
             return true;
+        }
+        catch (System.ServiceProcess.TimeoutException ex)
+        {
+            errorMessage = Text.Format(
+                "service.timeoutError",
+                timeout.TotalSeconds,
+                ex.Message);
+            return false;
         }
         catch (InvalidOperationException ex)
         {
-            error = "Start failed: " + ex.Message;
+            errorMessage = ex.InnerException?.Message ?? ex.Message;
             return false;
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            error = "Start failed: " + ex.Message;
+            errorMessage = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
             return false;
         }
         catch (Exception ex)
         {
-            error = "Start failed: " + ex.Message;
+            errorMessage = ex.Message;
             return false;
         }
     }
 
-    public bool TrySetStartType(string serviceName, ServiceStartType startType, out string? error)
+    public bool TrySetStartType(
+        string serviceName,
+        ServiceStartType startType,
+        out string? errorMessage)
     {
-        error = null;
-
-        if (!ServiceExists(serviceName))
-            return true;
-
-        var native = startType switch
+        var nativeStartType = startType switch
         {
             ServiceStartType.Auto => 2,
             ServiceStartType.Manual => 3,
             ServiceStartType.Disabled => 4,
-            _ => 3
+            _ => -1
         };
 
-        var ok = NativeServiceApi.TrySetStartType(serviceName, native, out var err);
-        if (!ok)
+        if (nativeStartType < 0)
         {
-            error = err;
+            errorMessage = Text.Format(
+                "service.unsupportedStartupType",
+                ServiceStateText.Get(startType));
             return false;
         }
 
-        return true;
+        return NativeServiceApi.TrySetStartType(serviceName, nativeStartType, out _, out errorMessage);
     }
 
-    private static bool ServiceExists(string serviceName)
+    private static ServiceRunState GetRunState(string serviceName, out string? error)
     {
+        error = null;
         try
         {
-            // Enumerating all services is heavier; this is fast enough and safe.
-            using var sc = new ServiceController(serviceName);
-            _ = sc.Status; // triggers lookup
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+            using var controller = new ServiceController(serviceName);
+            controller.Refresh();
 
-    private static ServiceRunState GetRunState(string serviceName)
-    {
-        try
-        {
-            using var sc = new ServiceController(serviceName);
-
-            return sc.Status switch
+            return controller.Status switch
             {
                 ServiceControllerStatus.Running => ServiceRunState.Running,
                 ServiceControllerStatus.Stopped => ServiceRunState.Stopped,
                 ServiceControllerStatus.StartPending => ServiceRunState.StartPending,
                 ServiceControllerStatus.StopPending => ServiceRunState.StopPending,
                 ServiceControllerStatus.Paused => ServiceRunState.Paused,
+                ServiceControllerStatus.PausePending => ServiceRunState.PausePending,
+                ServiceControllerStatus.ContinuePending => ServiceRunState.ContinuePending,
                 _ => ServiceRunState.Unknown
             };
         }
-        catch
+        catch (InvalidOperationException ex)
         {
+            error = ex.InnerException?.Message ?? ex.Message;
+            return ServiceRunState.Unknown;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            error = Text.Format(
+                "service.win32Error",
+                ex.NativeErrorCode,
+                ex.Message);
+            return ServiceRunState.Unknown;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
             return ServiceRunState.Unknown;
         }
     }
 
-    private static ServiceStartType GetStartType(string serviceName, out string? note)
-    {
-        note = null;
-
-        var ok = NativeServiceApi.TryGetStartType(serviceName, out var st, out var err);
-        if (!ok)
-        {
-            note = err;
-            return ServiceStartType.Unknown;
-        }
-
-        return st switch
+    private static ServiceStartType MapStartType(int nativeStartType)
+        => nativeStartType switch
         {
             2 => ServiceStartType.Auto,
             3 => ServiceStartType.Manual,
             4 => ServiceStartType.Disabled,
             _ => ServiceStartType.Unknown
         };
-    }
 }

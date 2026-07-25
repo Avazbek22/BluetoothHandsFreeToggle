@@ -1,37 +1,39 @@
-﻿using BluetoothHandsFreeToggle.App;
+using System.Text;
+using BluetoothHandsFreeToggle.App;
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 using BluetoothHandsFreeToggle.Ui;
-
-Console.OutputEncoding = System.Text.Encoding.UTF8;
-Console.Title = AppInfo.AppName;
-
-var appInfo = AppInfo.Create();
-var cli = new CommandLine(args);
 
 try
 {
-    // CLI mode (status/disable/enable and internal elevated child mode)
-    if (cli.TryHandleNonInteractive(appInfo))
-        return;
+    Console.OutputEncoding = Encoding.UTF8;
 
-    // Interactive mode: ask for admin ONCE at startup.
+    var languagePreferenceStore = new FileLanguagePreferenceStore();
+    var startupLanguage = AppLanguageResolver.ResolveStartupLanguage(languagePreferenceStore);
+    Text.Initialize(new LocalizationService(languagePreferenceStore, startupLanguage));
+
+    Console.Title = AppInfo.AppName;
+
+    var appInfo = AppInfo.Create();
+
+    // Interactive mode asks for elevation once. If UAC is cancelled, status remains available.
     if (!appInfo.IsAdministrator)
     {
-        var startedElevated = AdminHelper.TryRelaunchAsAdministrator(appInfo.ExePath, args);
+        var startedElevated = AdminHelper.TryRelaunchAsAdministrator(appInfo.ExePath);
         if (startedElevated)
             return;
 
-        // User cancelled UAC -> continue in read-only mode (no more UAC popups).
-        appInfo = AppInfo.Create(); // refresh just in case
+        appInfo = AppInfo.Create();
     }
 
-    var engine = new ToggleEngine();
-    var menu = new MenuLoop(appInfo, engine);
-    menu.Run();
+    new MenuLoop(appInfo, new ToggleEngine()).Run();
 }
 catch (Exception ex)
 {
-    ConsoleHelpers.WriteError("FATAL ERROR");
-    Console.WriteLine(ex);
-    ConsoleHelpers.Pause();
+    Environment.ExitCode = 1;
+    ConsoleHelpers.WriteError(Text.Get("program.fatalError"));
+    Console.Error.WriteLine(ex);
+
+    if (!Console.IsInputRedirected && Environment.UserInteractive)
+        ConsoleHelpers.Pause();
 }
