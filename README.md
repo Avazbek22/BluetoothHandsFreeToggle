@@ -49,7 +49,7 @@ BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-q
 **All versions and release notes:**
 👉 [https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases)
 
-**Package:** Portable Windows x64 app · Single EXE · No installer · No separate .NET runtime
+**Packages:** Portable Windows x64 and ARM64 apps · Single EXE · No installer · No separate .NET runtime
 
 ---
 
@@ -220,7 +220,7 @@ Hard mode affects Bluetooth Classic HFP **system-wide**, not one selected headse
 ### Compatibility
 
 - Windows 10 or Windows 11.
-- Official release build: self-contained single-file `win-x64`.
+- Official release builds: self-contained single-file `win-x64` and `win-arm64`.
 - Bluetooth Classic headsets using A2DP/HFP.
 - Administrator access for Soft, Hard, and Restore operations.
 
@@ -285,18 +285,24 @@ dotnet build --configuration Release --no-restore
 dotnet test --configuration Release --no-build --no-restore
 ```
 
-Create the compressed, self-contained, single-file `win-x64` build:
+Create verified release artifacts for `win-x64` and `win-arm64`:
 
 ```powershell
-dotnet publish BluetoothHandsFreeToggle/BluetoothHandsFreeToggle.csproj `
-  --configuration Release `
-  -p:PublishProfile=win-x64
+.\scripts\Publish-Release.ps1
 ```
 
-The published executable is placed under:
+The release script requires a clean `master` branch synchronized with `origin/master`,
+runs all tests, publishes both architectures, and generates SHA-256 checksums. For a
+local packaging test from another branch or a dirty working tree:
+
+```powershell
+.\scripts\Publish-Release.ps1 -SkipRepositoryChecks
+```
+
+Release files are placed under:
 
 ```text
-BluetoothHandsFreeToggle/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish/
+artifacts/release/v<version>/
 ```
 
 ## Support the project
