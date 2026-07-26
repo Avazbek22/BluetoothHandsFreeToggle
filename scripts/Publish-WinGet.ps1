@@ -374,12 +374,15 @@ PackageUrl: https://github.com/$Repository
 License: MIT
 LicenseUrl: https://github.com/$Repository/blob/master/LICENSE
 Copyright: Copyright (c) 2026 Avazbek Olimov
-ShortDescription: Restores high-quality Bluetooth stereo audio by managing Windows Hands-Free services.
+ShortDescription: Resets or disables Windows Bluetooth Hands-Free services when a headset is stuck in low-quality call mode.
 Description: >-
-  Fixes Bluetooth headsets stuck in low-quality Hands-Free call mode on Windows.
-  Soft reset restarts active HFP services, while Hard mode safely disables HFP
-  after saving its original state. Restore returns the saved service
-  configuration. Hard mode also disables the Bluetooth headset microphone.
+  A Windows utility for Bluetooth headsets that remain in low-quality Hands-Free
+  call mode after a game or voice application stops using the microphone. Soft
+  reset tries to restore normal stereo audio by restarting active Hands-Free
+  services without disabling the headset microphone or changing service startup
+  settings. If low-quality audio keeps returning, Hard mode backs up and disables
+  these services for stable stereo playback, which also disables the headset
+  microphone. Restore returns the saved Windows service settings.
 InstallationNotes: >-
   Hard mode changes Windows Bluetooth Hands-Free services. Run Restore before
   uninstalling if you want to re-enable HFP and the Bluetooth headset
