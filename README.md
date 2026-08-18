@@ -46,8 +46,6 @@ BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-q
 **Latest GitHub release:**
 👉 [https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest)
 
-**Install via WinGet (Windows):** `winget install OlimoffDev.BluetoothHandsFreeToggle`
-
 ---
 
 <p align="center">
