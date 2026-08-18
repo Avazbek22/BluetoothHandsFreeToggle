@@ -82,4 +82,93 @@ public sealed class BackupStoreTests
             directory.Delete(recursive: true);
         }
     }
+
+    [Fact]
+    public void LoadRejectsUnsupportedStartupState()
+    {
+        var directory = Directory.CreateTempSubdirectory("BluetoothHandsFreeToggle.Tests.");
+        try
+        {
+            var path = Path.Combine(directory.FullName, "backup.json");
+            File.WriteAllText(
+                path,
+                """
+                {
+                  "SchemaVersion": 1,
+                  "CreatedUtc": "2026-08-18T00:00:00Z",
+                  "Services": {
+                    "BTAGService": {
+                      "Exists": true,
+                      "RunState": "Running",
+                      "StartType": 99
+                    }
+                  }
+                }
+                """);
+
+            var result = new BackupStore(path).Load();
+
+            Assert.False(result.Success);
+            Assert.False(result.Found);
+            Assert.Contains("invalid", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LoadRejectsUnexpectedServiceEntry()
+    {
+        var directory = Directory.CreateTempSubdirectory("BluetoothHandsFreeToggle.Tests.");
+        try
+        {
+            var path = Path.Combine(directory.FullName, "backup.json");
+            File.WriteAllText(
+                path,
+                """
+                {
+                  "SchemaVersion": 1,
+                  "CreatedUtc": "2026-08-18T00:00:00Z",
+                  "Services": {
+                    "UnrelatedService": {
+                      "Exists": true,
+                      "RunState": "Running",
+                      "StartType": "Manual"
+                    }
+                  }
+                }
+                """);
+
+            var result = new BackupStore(path).Load();
+
+            Assert.False(result.Success);
+            Assert.Contains("UnrelatedService", result.Error, StringComparison.Ordinal);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void LoadRejectsOversizedBackupBeforeDeserialization()
+    {
+        var directory = Directory.CreateTempSubdirectory("BluetoothHandsFreeToggle.Tests.");
+        try
+        {
+            var path = Path.Combine(directory.FullName, "backup.json");
+            File.WriteAllText(path, new string('x', 70 * 1024));
+
+            var result = new BackupStore(path).Load();
+
+            Assert.False(result.Success);
+            Assert.Contains("large", result.Error, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            directory.Delete(recursive: true);
+        }
+    }
 }

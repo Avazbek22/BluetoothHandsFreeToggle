@@ -21,7 +21,7 @@ public sealed class ToggleEngine
     public ToggleEngine(
         IServiceManager services,
         IBackupStore backup,
-        string mutexName = "BluetoothHandsFreeToggle.Operation.v2")
+        string mutexName = @"Global\BluetoothHandsFreeToggle.Operation")
     {
         _services = services;
         _backup = backup;
@@ -195,6 +195,44 @@ public sealed class ToggleEngine
                 warnings);
         }
 
+        foreach (var snapshot in before.Where(snapshot => snapshot.Exists))
+        {
+            if (IsRestorableStartType(snapshot.StartType))
+                continue;
+
+            errors.Add(Text.Format(
+                "hard.unsupportedStartup",
+                snapshot.FriendlyName,
+                ServiceStateText.Get(snapshot.StartType),
+                snapshot.NativeStartValue?.ToString(CultureInfo.InvariantCulture) ?? "-"));
+        }
+
+        if (errors.Count > 0)
+        {
+            errors.Add(Text.Get("hard.noConfigurationChanged"));
+            return BuildReport(
+                Text.Get("title.hardComplete"),
+                Text.Get("title.hardFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
+        }
+
+        var prepare = _backup.Prepare();
+        if (!prepare.Success)
+        {
+            errors.Add(prepare.Error!);
+            errors.Add(Text.Get("hard.noConfigurationChanged"));
+            return BuildReport(
+                Text.Get("title.hardComplete"),
+                Text.Get("title.hardFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
+        }
+
         var backup = _backup.Load();
         if (!backup.Success)
         {
@@ -300,6 +338,19 @@ public sealed class ToggleEngine
                 warnings);
         }
 
+        var prepare = _backup.Prepare();
+        if (!prepare.Success)
+        {
+            errors.Add(prepare.Error!);
+            return BuildReport(
+                Text.Get("title.restoreComplete"),
+                Text.Get("title.restoreFailed"),
+                before,
+                lines,
+                errors,
+                warnings);
+        }
+
         var load = _backup.Load();
         if (!load.Success)
         {
@@ -325,45 +376,45 @@ public sealed class ToggleEngine
 
         var desiredStates = new Dictionary<string, DesiredServiceState>(StringComparer.OrdinalIgnoreCase);
 
+        if (load.Backup is not null)
+        {
+            var currentByName = before.ToDictionary(
+                snapshot => snapshot.ServiceName,
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (serviceName, original) in load.Backup.Services)
+            {
+                if (!original.Exists ||
+                    !currentByName.TryGetValue(serviceName, out var current) ||
+                    current.Exists)
+                {
+                    continue;
+                }
+
+                errors.Add(Text.Format(
+                    "restore.serviceCurrentlyMissing",
+                    current.FriendlyName));
+            }
+        }
+
         foreach (var snapshot in before.Where(snapshot => snapshot.Exists))
         {
-            var desired = ResolveDesiredState(snapshot, load.Backup, warnings);
+            var resolution = ResolveDesiredState(snapshot, load.Backup);
+            if (resolution.Error is not null)
+            {
+                errors.Add(resolution.Error);
+                continue;
+            }
+
+            if (resolution.Warning is not null)
+                warnings.Add(resolution.Warning);
+
+            if (resolution.Desired is null)
+                continue;
+
+            var desired = resolution.Desired;
             desiredStates[snapshot.ServiceName] = desired;
-
-            if (!_services.TrySetStartType(snapshot.ServiceName, desired.StartType, out var startupError))
-            {
-                errors.Add(Text.Format(
-                    "restore.startupFailed",
-                    snapshot.FriendlyName,
-                    startupError));
-                continue;
-            }
-
-            var runStateChanged = desired.ShouldRun
-                ? _services.TryStartService(snapshot.ServiceName, ServiceTimeout, out var runError)
-                : _services.TryStopService(snapshot.ServiceName, ServiceTimeout, out runError);
-
-            if (!runStateChanged)
-            {
-                var action = Text.Get(desired.ShouldRun
-                    ? "restore.actionStart"
-                    : "restore.actionStop");
-                errors.Add(Text.Format(
-                    "restore.actionFailed",
-                    snapshot.FriendlyName,
-                    action,
-                    runError));
-                continue;
-            }
-
-            var stateText = ServiceStateText.Get(desired.ShouldRun
-                ? ServiceRunState.Running
-                : ServiceRunState.Stopped);
-            lines.Add(Text.Format(
-                "restore.stateRestored",
-                snapshot.FriendlyName,
-                ServiceStateText.Get(desired.StartType),
-                stateText));
+            ApplyDesiredState(snapshot, desired, lines, errors);
         }
 
         var after = GetSnapshots();
@@ -453,35 +504,148 @@ public sealed class ToggleEngine
         }
     }
 
-    private static DesiredServiceState ResolveDesiredState(
-        ServiceSnapshot current,
-        BackupFile? backup,
-        List<string> warnings)
+    private void ApplyDesiredState(
+        ServiceSnapshot snapshot,
+        DesiredServiceState desired,
+        List<string> lines,
+        List<string> errors)
     {
-        if (backup is null ||
-            !backup.Services.TryGetValue(current.ServiceName, out var original) ||
+        if (desired.StartType is ServiceStartType.Disabled && desired.ShouldRun)
+        {
+            RestoreRunningDisabledState(snapshot, desired, lines, errors);
+            return;
+        }
+
+        if (!_services.TrySetStartType(snapshot.ServiceName, desired.StartType, out var startupError))
+        {
+            errors.Add(Text.Format(
+                "restore.startupFailed",
+                snapshot.FriendlyName,
+                startupError));
+            return;
+        }
+
+        if (!TryApplyRunState(snapshot, desired.ShouldRun, out var runError))
+        {
+            AddRunStateError(snapshot, desired.ShouldRun, runError, errors);
+            return;
+        }
+
+        AddRestoredStateLine(desired, lines);
+    }
+
+    private void RestoreRunningDisabledState(
+        ServiceSnapshot snapshot,
+        DesiredServiceState desired,
+        List<string> lines,
+        List<string> errors)
+    {
+        if (!_services.TrySetStartType(
+                snapshot.ServiceName,
+                ServiceStartType.Manual,
+                out var temporaryStartupError))
+        {
+            errors.Add(Text.Format(
+                "restore.temporaryStartupFailed",
+                snapshot.FriendlyName,
+                temporaryStartupError));
+            return;
+        }
+
+        var started = _services.TryStartService(
+            snapshot.ServiceName,
+            ServiceTimeout,
+            out var startError);
+
+        var disabled = _services.TrySetStartType(
+            snapshot.ServiceName,
+            ServiceStartType.Disabled,
+            out var disabledStartupError);
+
+        if (!started)
+            AddRunStateError(snapshot, shouldRun: true, startError, errors);
+
+        if (!disabled)
+        {
+            errors.Add(Text.Format(
+                "restore.startupFailed",
+                snapshot.FriendlyName,
+                disabledStartupError));
+        }
+
+        if (started && disabled)
+            AddRestoredStateLine(desired, lines);
+    }
+
+    private bool TryApplyRunState(
+        ServiceSnapshot snapshot,
+        bool shouldRun,
+        out string? error)
+        => shouldRun
+            ? _services.TryStartService(snapshot.ServiceName, ServiceTimeout, out error)
+            : _services.TryStopService(snapshot.ServiceName, ServiceTimeout, out error);
+
+    private static void AddRunStateError(
+        ServiceSnapshot snapshot,
+        bool shouldRun,
+        string? error,
+        List<string> errors)
+    {
+        var action = Text.Get(shouldRun
+            ? "restore.actionStart"
+            : "restore.actionStop");
+        errors.Add(Text.Format(
+            "restore.actionFailed",
+            snapshot.FriendlyName,
+            action,
+            error));
+    }
+
+    private static void AddRestoredStateLine(
+        DesiredServiceState desired,
+        List<string> lines)
+    {
+        var stateText = ServiceStateText.Get(desired.ShouldRun
+            ? ServiceRunState.Running
+            : ServiceRunState.Stopped);
+        lines.Add(Text.Format(
+            "restore.stateRestored",
+            desired.FriendlyName,
+            ServiceStateText.Get(desired.StartType),
+            stateText));
+    }
+
+    private static DesiredStateResolution ResolveDesiredState(
+        ServiceSnapshot current,
+        BackupFile? backup)
+    {
+        if (backup is null)
+        {
+            return DesiredStateResolution.Resolved(new DesiredServiceState(
+                current.FriendlyName,
+                ServiceStartType.Manual,
+                ShouldRun: true));
+        }
+
+        if (!backup.Services.TryGetValue(current.ServiceName, out var original) ||
             original is null)
-            return new DesiredServiceState(ServiceStartType.Manual, ShouldRun: true);
+        {
+            return DesiredStateResolution.Failed(Text.Format(
+                "restore.backupEntryMissing",
+                current.FriendlyName));
+        }
 
         if (!original.Exists)
         {
-            warnings.Add(Text.Format(
+            return DesiredStateResolution.Skipped(Text.Format(
                 "restore.serviceOriginallyAbsent",
                 current.FriendlyName));
-            return new DesiredServiceState(ServiceStartType.Manual, ShouldRun: true);
         }
 
-        var startType = original.StartType switch
+        if (!IsRestorableStartType(original.StartType))
         {
-            ServiceStartType.Auto => ServiceStartType.Auto,
-            ServiceStartType.Manual => ServiceStartType.Manual,
-            _ => ServiceStartType.Manual
-        };
-
-        if (startType != original.StartType)
-        {
-            warnings.Add(Text.Format(
-                "restore.startupNotRestorable",
+            return DesiredStateResolution.Failed(Text.Format(
+                "restore.unsupportedStartup",
                 current.FriendlyName,
                 ServiceStateText.Get(original.StartType)));
         }
@@ -493,8 +657,17 @@ public sealed class ToggleEngine
             ServiceRunState.Paused or
             ServiceRunState.PausePending;
 
-        return new DesiredServiceState(startType, shouldRun);
+        return DesiredStateResolution.Resolved(new DesiredServiceState(
+            current.FriendlyName,
+            original.StartType,
+            shouldRun));
     }
+
+    private static bool IsRestorableStartType(ServiceStartType startType)
+        => startType is
+            ServiceStartType.Auto or
+            ServiceStartType.Manual or
+            ServiceStartType.Disabled;
 
     private static void VerifySoftResult(
         IReadOnlyCollection<ServiceSnapshot> before,
@@ -555,9 +728,21 @@ public sealed class ToggleEngine
         IReadOnlyDictionary<string, DesiredServiceState> desiredStates,
         List<string> errors)
     {
-        foreach (var snapshot in after.Where(snapshot => snapshot.Exists && snapshot.QuerySucceeded))
+        var afterByName = after.ToDictionary(
+            snapshot => snapshot.ServiceName,
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (serviceName, desired) in desiredStates)
         {
-            if (!desiredStates.TryGetValue(snapshot.ServiceName, out var desired))
+            if (!afterByName.TryGetValue(serviceName, out var snapshot) || !snapshot.Exists)
+            {
+                errors.Add(Text.Format(
+                    "verify.restoreServiceMissing",
+                    desired.FriendlyName));
+                continue;
+            }
+
+            if (!snapshot.QuerySucceeded)
                 continue;
 
             if (snapshot.StartType != desired.StartType)
@@ -617,7 +802,25 @@ public sealed class ToggleEngine
             output);
     }
 
-    private sealed record DesiredServiceState(ServiceStartType StartType, bool ShouldRun);
+    private sealed record DesiredServiceState(
+        string FriendlyName,
+        ServiceStartType StartType,
+        bool ShouldRun);
+
+    private sealed record DesiredStateResolution(
+        DesiredServiceState? Desired,
+        string? Warning,
+        string? Error)
+    {
+        public static DesiredStateResolution Resolved(DesiredServiceState desired)
+            => new(desired, null, null);
+
+        public static DesiredStateResolution Skipped(string warning)
+            => new(null, warning, null);
+
+        public static DesiredStateResolution Failed(string error)
+            => new(null, null, error);
+    }
 }
 
 public sealed record ToggleReport(

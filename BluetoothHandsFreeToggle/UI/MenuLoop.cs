@@ -27,6 +27,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
 
             switch (ConsoleHelpers.ReadMenuChoice())
             {
+                case null:
                 case "0":
                     return;
                 case "1":
@@ -66,11 +67,14 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
     {
         try
         {
-            using var process = Process.Start(new ProcessStartInfo
+            var startInfo = new ProcessStartInfo
             {
                 FileName = AppInfo.SupportUrl,
                 UseShellExecute = true
-            });
+            };
+            using var process = Process.Start(startInfo)
+                                ?? throw new InvalidOperationException(
+                                    "Windows did not start the default browser.");
         }
         catch
         {
@@ -98,7 +102,6 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
     private void RenderHeader()
     {
         ConsoleHelpers.WriteHeader(AppInfo.AppDisplayName);
-        Console.WriteLine($"{Text.Get("header.version")}: {appInfo.Version}");
         Console.WriteLine($"{Text.Get("header.os")}: {appInfo.OsDisplayName}");
         Console.WriteLine($"{Text.Get("header.runtime")}: {appInfo.FrameworkDescription}");
 

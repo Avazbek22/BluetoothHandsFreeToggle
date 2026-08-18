@@ -46,8 +46,6 @@ BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-q
 **Latest GitHub release:**
 👉 [https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest)
 
-**Install via WinGet (Windows):** `winget install OlimoffDev.BluetoothHandsFreeToggle`
-
 ---
 
 <p align="center">
@@ -67,7 +65,7 @@ Additional highlights:
 - Interactive menu for quick recovery.
 - Soft mode preserves headset microphone availability.
 - Hard mode prioritizes high-quality playback.
-- Restore returns the saved service startup and running state.
+- Restore returns the exact saved service startup and running state.
 - Final state verification after every operation.
 - English and Russian application interface with automatic language detection.
 - Built-in help, status reporting, and safe handling of partial failures.
@@ -94,7 +92,7 @@ OBS, NVIDIA ShadowPlay, browser recording tools, and other capture software may 
 
 ### You want maximum game audio quality and use a separate microphone
 
-Hard mode is designed for this setup. It disables Bluetooth Classic HFP system-wide, forcing Windows to prioritize high-quality A2DP playback. Restore HFP later whenever you need the headset microphone again.
+Hard mode is designed for this setup. It disables Bluetooth Classic HFP system-wide, forcing Windows to prioritize high-quality A2DP playback. Restore the previous HFP configuration later; if HFP was enabled before Hard mode, the headset microphone becomes available again.
 
 ## Choose your mode
 
@@ -103,7 +101,7 @@ Hard mode is designed for this setup. It disables Bluetooth Classic HFP system-w
 | **Status** | Reads supported HFP services and backup state without changing anything. | Available | You want to inspect the current state or diagnose a problem. |
 | **Soft reset** | Restarts only active HFP services without changing their startup type. | Preserved | A game or voice app released the microphone, but Windows stayed in call mode. |
 | **Hard mode** | Stops and disables Bluetooth Classic HFP system-wide after saving the original state. | Disabled | You need reliable stereo playback now and can use another microphone—or no microphone. |
-| **Restore** | Restores the startup and Running/Stopped state saved by Hard mode. | Restored | You need the Bluetooth headset microphone again. |
+| **Restore** | Exactly restores the startup and Running/Stopped state saved by Hard mode. Without a backup, it uses `Manual + Running` recovery defaults. | Previous state | You want to leave Hard mode and return to the prior configuration. |
 
 > [!IMPORTANT]
 > Bluetooth Classic cannot provide A2DP-quality stereo playback while the headset's HFP microphone is actively in use. Soft reset can clear a **stuck** HFP session, but it cannot bypass this Bluetooth limitation. Hard mode solves the quality problem by disabling HFP, which also disables the Bluetooth headset microphone.
@@ -118,7 +116,7 @@ On Windows 11, A2DP and HFP are exposed through unified audio endpoints, and Win
 4. Start with **`[2] Soft reset`**.
 5. If Windows immediately returns to low-quality audio, confirm that no application is still using the headset microphone.
 6. Use **`[3] Hard mode`** when you want to prioritize playback quality completely.
-7. Use **`[4] Restore`** whenever you need the Bluetooth headset microphone again.
+7. Use **`[4] Restore`** to leave Hard mode and return the previous HFP service state.
 
 After an operation, reconnect the headset or restart audio playback if a game cached the previous Windows audio route.
 
@@ -189,10 +187,10 @@ Recovery behavior is intentionally conservative:
 
 - If a backup cannot be created, Hard mode makes no service changes.
 - Repeated Hard mode runs preserve the first original-state backup.
-- Backups are written atomically through a temporary file.
+- Backups are written atomically through a temporary file and stored with a protected Windows ACL.
 - Partial Restore attempts keep the backup for another retry.
 - A fully successful and verified Restore removes the backup.
-- A named mutex prevents concurrent operations from racing over services or backup state.
+- A system-wide named mutex prevents concurrent operations in different Windows sessions from racing over services or backup state.
 - Every operation reads the final Windows service state and reports partial failures.
 
 The tool uses the Windows Service Control Manager API. It does **not**:

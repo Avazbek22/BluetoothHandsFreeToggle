@@ -11,6 +11,7 @@ public interface IServiceManager
 public interface IBackupStore
 {
     string BackupPath { get; }
+    BackupWriteResult Prepare();
     BackupLoadResult Load();
     BackupWriteResult Save(IEnumerable<ServiceSnapshot> snapshots);
     BackupWriteResult Delete();

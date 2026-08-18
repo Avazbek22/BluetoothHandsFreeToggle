@@ -6,8 +6,9 @@ Modes:
  - Soft reset: restarts only active HFP services without changing their startup type.
    Use it when call mode remained active after an app stopped using the microphone.
  - Hard mode: stops and disables HFP system-wide to force high-quality A2DP playback.
-   The Bluetooth headset microphone remains unavailable until Restore is used.
- - Restore: returns the startup and Running/Stopped state saved by Hard mode.
+   The Bluetooth headset microphone remains unavailable while Hard mode is active.
+ - Restore: exactly returns the startup and Running/Stopped state saved by Hard mode.
+   If no backup exists, it uses Manual + Running recovery defaults.
  - Change language: switches between English and Russian and remembers the choice.
 
 Important limitation:
@@ -26,7 +27,7 @@ Safety:
 Troubleshooting:
  - Close games, browsers, voice chat and recording apps before Soft reset.
  - If Soft reset does not restore stereo quality, use Hard mode.
- - If you need the headset microphone again, use Restore.
+ - If Hard mode disabled the headset microphone, use Restore to return the previous state.
  - Reconnect the headset or restart audio playback after an operation if an app
    cached the previous audio route.
 

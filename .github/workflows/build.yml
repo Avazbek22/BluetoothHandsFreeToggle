@@ -29,3 +29,31 @@ jobs:
 
       - name: Test
         run: dotnet test BluetoothHandsFreeToggle.sln --configuration Release --no-build --no-restore
+
+      - name: Verify x64 production publish
+        run: >-
+          dotnet publish BluetoothHandsFreeToggle/BluetoothHandsFreeToggle.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --nologo
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -p:ContinuousIntegrationBuild=true
+
+      - name: Verify ARM64 production publish
+        run: >-
+          dotnet publish BluetoothHandsFreeToggle/BluetoothHandsFreeToggle.csproj
+          --configuration Release
+          --runtime win-arm64
+          --self-contained true
+          --nologo
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          -p:ContinuousIntegrationBuild=true

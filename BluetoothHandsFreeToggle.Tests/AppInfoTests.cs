@@ -13,7 +13,6 @@ public sealed class AppInfoTests
         Assert.False(string.IsNullOrWhiteSpace(appInfo.ExePath));
         Assert.False(string.IsNullOrWhiteSpace(appInfo.OsDisplayName));
         Assert.False(string.IsNullOrWhiteSpace(appInfo.FrameworkDescription));
-        Assert.False(string.IsNullOrWhiteSpace(appInfo.Version));
     }
 
     [Fact]
@@ -25,7 +24,7 @@ public sealed class AppInfoTests
     [Fact]
     public void AppDisplayNameIncludesVersionTag()
     {
-        Assert.Equal("v2.0", AppInfo.AppVersionTag);
-        Assert.Equal("BluetoothHandsFreeToggle v2.0", AppInfo.AppDisplayName);
+        Assert.Equal("v2.1", AppInfo.AppVersionTag);
+        Assert.Equal("BluetoothHandsFreeToggle v2.1", AppInfo.AppDisplayName);
     }
 }

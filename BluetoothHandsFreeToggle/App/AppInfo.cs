@@ -7,7 +7,7 @@ namespace BluetoothHandsFreeToggle.App;
 public sealed class AppInfo
 {
     public const string AppName = "BluetoothHandsFreeToggle";
-    public const string AppDisplayVersion = "2.0";
+    public const string AppDisplayVersion = "2.1";
     public const string AppVersionTag = "v" + AppDisplayVersion;
     public const string AppDisplayName = AppName + " " + AppVersionTag;
     public const string SupportUrl = "https://boosty.to/avazbek22";
@@ -16,15 +16,17 @@ public sealed class AppInfo
     public bool IsAdministrator { get; }
     public string OsDisplayName { get; }
     public string FrameworkDescription { get; }
-    public string Version { get; }
 
-    private AppInfo(string exePath, bool isAdministrator, string osDisplayName, string frameworkDescription, string version)
+    private AppInfo(
+        string exePath,
+        bool isAdministrator,
+        string osDisplayName,
+        string frameworkDescription)
     {
         ExePath = exePath;
         IsAdministrator = isAdministrator;
         OsDisplayName = osDisplayName;
         FrameworkDescription = frameworkDescription;
-        Version = version;
     }
 
     public static AppInfo Create()
@@ -39,9 +41,8 @@ public sealed class AppInfo
         var osDisplayName = BuildWindowsDisplayName();
 
         var fw = RuntimeInformation.FrameworkDescription.Trim();
-        var ver = typeof(AppInfo).Assembly.GetName().Version?.ToString() ?? "1.0.0";
 
-        return new AppInfo(exePath, isAdmin, osDisplayName, fw, ver);
+        return new AppInfo(exePath, isAdmin, osDisplayName, fw);
     }
 
     private static string BuildWindowsDisplayName()
