@@ -46,7 +46,7 @@ public sealed class ToggleEngineTests
         var report = engine.SoftResetHandsFree();
 
         Assert.False(report.Success);
-        Assert.Contains(report.Lines, line => line.Contains("use Restore", StringComparison.Ordinal));
+        Assert.Contains(report.Lines, line => line.Contains("Soft mode cannot", StringComparison.Ordinal));
         Assert.Equal(0, services.StartCalls);
         Assert.Equal(0, services.SetStartTypeCalls);
     }
@@ -63,6 +63,23 @@ public sealed class ToggleEngineTests
         Assert.False(report.Success);
         Assert.Equal(0, services.StopCalls);
         Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.Equal(ServiceStartType.Auto, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Running, services.Btag.RunState);
+    }
+
+    [Fact]
+    public void HardModeDoesNotChangeAnythingWhenBackupStorageCannotBePrepared()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Auto);
+        var backup = new MemoryBackupStore { PrepareError = "unsafe backup path" };
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.HardDisableHandsFree();
+
+        Assert.False(report.Success);
+        Assert.Equal(0, services.StopCalls);
+        Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.Equal(0, backup.SaveCalls);
         Assert.Equal(ServiceStartType.Auto, services.Btag.StartType);
         Assert.Equal(ServiceRunState.Running, services.Btag.RunState);
     }
@@ -101,6 +118,23 @@ public sealed class ToggleEngineTests
     }
 
     [Fact]
+    public void HardModeDoesNotChangeServiceWithUnsupportedOriginalStartupType()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Unknown);
+        services.Btag = services.Btag with { NativeStartValue = 1 };
+        var backup = new MemoryBackupStore();
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.HardDisableHandsFree();
+
+        Assert.False(report.Success);
+        Assert.Equal(0, services.StopCalls);
+        Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.Equal(0, backup.SaveCalls);
+        Assert.Contains(report.Lines, line => line.Contains("not supported", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void RestoreReturnsOriginalStartupAndRunStateThenDeletesBackup()
     {
         var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Auto);
@@ -118,6 +152,21 @@ public sealed class ToggleEngineTests
     }
 
     [Fact]
+    public void RestoreWithoutBackupUsesManualAndRunningRecoveryDefaults()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Disabled);
+        var backup = new MemoryBackupStore();
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Equal(ServiceStartType.Manual, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Running, services.Btag.RunState);
+        Assert.Equal(0, backup.DeleteCalls);
+    }
+
+    [Fact]
     public void RestoreKeepsOriginallyStoppedServiceStopped()
     {
         var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Manual);
@@ -132,6 +181,153 @@ public sealed class ToggleEngineTests
         Assert.Equal(ServiceRunState.Stopped, services.Btag.RunState);
         Assert.Equal(0, services.StartCalls);
         Assert.Null(backup.Stored);
+    }
+
+    [Fact]
+    public void RestoreKeepsOriginallyDisabledServiceDisabled()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Disabled);
+        var backup = new MemoryBackupStore();
+        var engine = CreateEngine(services, backup);
+        Assert.True(engine.HardDisableHandsFree().Success);
+        services.StartTypeChanges.Clear();
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Equal(ServiceStartType.Disabled, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Stopped, services.Btag.RunState);
+        Assert.Equal([ServiceStartType.Disabled], services.StartTypeChanges);
+        Assert.Null(backup.Stored);
+    }
+
+    [Fact]
+    public void RestoreCanRecreateOriginallyRunningAndDisabledState()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Disabled);
+        services.FailStartWhenDisabled = true;
+        var backup = new MemoryBackupStore();
+        var engine = CreateEngine(services, backup);
+        Assert.True(engine.HardDisableHandsFree().Success);
+        services.StartTypeChanges.Clear();
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Equal(ServiceStartType.Disabled, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Running, services.Btag.RunState);
+        Assert.Equal(
+            [ServiceStartType.Manual, ServiceStartType.Disabled],
+            services.StartTypeChanges);
+        Assert.Null(backup.Stored);
+    }
+
+    [Fact]
+    public void RestoreDoesNotGuessStateForPresentServiceMissingFromBackup()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Disabled);
+        var backup = new MemoryBackupStore
+        {
+            Stored = new BackupFile(1, DateTimeOffset.UtcNow, [])
+        };
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.False(report.Success);
+        Assert.Equal(ServiceStartType.Disabled, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Stopped, services.Btag.RunState);
+        Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.NotNull(backup.Stored);
+        Assert.Equal(0, backup.DeleteCalls);
+    }
+
+    [Fact]
+    public void RestoreDoesNotApplyUnsupportedStartupStateFromBackup()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Disabled);
+        var backup = new MemoryBackupStore
+        {
+            Stored = new BackupFile(
+                1,
+                DateTimeOffset.UtcNow,
+                new Dictionary<string, BackupServiceState>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["BTAGService"] = new(
+                        Exists: true,
+                        RunState: ServiceRunState.Running,
+                        StartType: ServiceStartType.Unknown)
+                })
+        };
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.False(report.Success);
+        Assert.Equal(ServiceStartType.Disabled, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Stopped, services.Btag.RunState);
+        Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.NotNull(backup.Stored);
+        Assert.Equal(0, backup.DeleteCalls);
+    }
+
+    [Fact]
+    public void RestoreLeavesNewlyAppearedServiceUnchangedWhenItWasOriginallyAbsent()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Auto);
+        var backup = new MemoryBackupStore
+        {
+            Stored = new BackupFile(
+                1,
+                DateTimeOffset.UtcNow,
+                new Dictionary<string, BackupServiceState>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["BTAGService"] = new(
+                        Exists: false,
+                        ServiceRunState.NotPresent,
+                        ServiceStartType.NotPresent)
+                })
+        };
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Equal(ServiceStartType.Auto, services.Btag.StartType);
+        Assert.Equal(ServiceRunState.Running, services.Btag.RunState);
+        Assert.Equal(0, services.SetStartTypeCalls);
+        Assert.Contains(report.Lines, line => line.Contains("left unchanged", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RestorePreservesBackupWhenOriginallyPresentServiceIsCurrentlyMissing()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Disabled);
+        var backup = new MemoryBackupStore
+        {
+            Stored = new BackupFile(
+                1,
+                DateTimeOffset.UtcNow,
+                new Dictionary<string, BackupServiceState>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["BTAGService"] = new(
+                        Exists: true,
+                        ServiceRunState.Running,
+                        ServiceStartType.Manual),
+                    ["BthHFSrv"] = new(
+                        Exists: true,
+                        ServiceRunState.Running,
+                        ServiceStartType.Manual)
+                })
+        };
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.RestoreHandsFree();
+
+        Assert.False(report.Success);
+        Assert.NotNull(backup.Stored);
+        Assert.Equal(0, backup.DeleteCalls);
+        Assert.Contains(report.Lines, line => line.Contains("currently missing", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -170,6 +366,21 @@ public sealed class ToggleEngineTests
         Assert.Contains(report.Lines, line => line.Contains("SCM unavailable", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void StatusDoesNotPrepareOrModifyBackupStorage()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Stopped, ServiceStartType.Manual);
+        var backup = new MemoryBackupStore();
+        var engine = CreateEngine(services, backup);
+
+        var report = engine.GetStatusReport();
+
+        Assert.True(report.Success);
+        Assert.Equal(0, backup.PrepareCalls);
+        Assert.Equal(0, backup.SaveCalls);
+        Assert.Equal(0, backup.DeleteCalls);
+    }
+
     private static ToggleEngine CreateEngine(IServiceManager services, IBackupStore backup)
         => new(services, backup, $"BluetoothHandsFreeToggle.Tests.{Guid.NewGuid():N}");
 
@@ -179,9 +390,11 @@ public sealed class ToggleEngineTests
         public string? StopError { get; set; }
         public string? StartError { get; set; }
         public string? SetStartTypeError { get; set; }
+        public bool FailStartWhenDisabled { get; set; }
         public int StopCalls { get; private set; }
         public int StartCalls { get; private set; }
         public int SetStartTypeCalls { get; private set; }
+        public List<ServiceStartType> StartTypeChanges { get; } = [];
 
         public static FakeServiceManager WithBtag(
             ServiceRunState runState,
@@ -233,6 +446,12 @@ public sealed class ToggleEngineTests
             if (errorMessage is not null)
                 return false;
 
+            if (FailStartWhenDisabled && Btag.StartType is ServiceStartType.Disabled)
+            {
+                errorMessage = "service is disabled";
+                return false;
+            }
+
             Btag = Btag with { RunState = ServiceRunState.Running };
             return true;
         }
@@ -247,6 +466,7 @@ public sealed class ToggleEngineTests
             if (errorMessage is not null)
                 return false;
 
+            StartTypeChanges.Add(startType);
             Btag = Btag with
             {
                 StartType = startType,
@@ -268,12 +488,22 @@ public sealed class ToggleEngineTests
     private sealed class MemoryBackupStore : IBackupStore
     {
         public string BackupPath => "memory://backup.json";
-        public BackupFile? Stored { get; private set; }
+        public BackupFile? Stored { get; set; }
         public string? LoadError { get; set; }
+        public string? PrepareError { get; set; }
         public string? SaveError { get; set; }
         public string? DeleteError { get; set; }
         public int SaveCalls { get; private set; }
         public int DeleteCalls { get; private set; }
+        public int PrepareCalls { get; private set; }
+
+        public BackupWriteResult Prepare()
+        {
+            PrepareCalls++;
+            return PrepareError is null
+                ? BackupWriteResult.Ok()
+                : BackupWriteResult.Failed(PrepareError);
+        }
 
         public BackupLoadResult Load()
         {

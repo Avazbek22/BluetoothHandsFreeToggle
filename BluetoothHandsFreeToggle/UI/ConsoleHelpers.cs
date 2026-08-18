@@ -39,10 +39,10 @@ public static class ConsoleHelpers
         Console.ReadKey(true);
     }
 
-    public static string ReadMenuChoice()
+    public static string? ReadMenuChoice()
     {
         Console.Write(Text.Get("common.select"));
-        return (Console.ReadLine() ?? "").Trim();
+        return Console.ReadLine()?.Trim();
     }
 
     public static void TryClearScreen()

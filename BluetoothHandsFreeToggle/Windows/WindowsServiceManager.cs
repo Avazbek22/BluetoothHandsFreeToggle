@@ -53,13 +53,25 @@ public sealed class WindowsServiceManager : IServiceManager
             using var controller = new ServiceController(serviceName);
             controller.Refresh();
 
-            if (controller.Status is ServiceControllerStatus.Stopped)
-                return true;
-
-            if (controller.Status is ServiceControllerStatus.StopPending)
+            switch (controller.Status)
             {
-                controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
-                return true;
+                case ServiceControllerStatus.Stopped:
+                    return true;
+
+                case ServiceControllerStatus.StopPending:
+                    controller.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+                    return true;
+
+                case ServiceControllerStatus.StartPending:
+                case ServiceControllerStatus.ContinuePending:
+                    controller.WaitForStatus(ServiceControllerStatus.Running, timeout);
+                    controller.Refresh();
+                    break;
+
+                case ServiceControllerStatus.PausePending:
+                    controller.WaitForStatus(ServiceControllerStatus.Paused, timeout);
+                    controller.Refresh();
+                    break;
             }
 
             controller.Stop();
