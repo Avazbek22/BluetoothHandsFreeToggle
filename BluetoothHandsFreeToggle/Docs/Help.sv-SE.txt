@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle återställer normal stereouppspelning när Windows lämnar ett Bluetooth Classic-headset i lågkvalitativt HFP-samtalsläge.
+
+Lägen:
+ - Hämta status: läser de stödda HFP-tjänsterna och säkerhetskopieringsstatus. Inga ändringar görs.
+ - Mjuk återställning: startar om endast aktiva HFP-tjänster utan att ändra deras starttyp.
+   Använd den när samtalsläget förblir aktivt efter att en app slutat använda mikrofonen.
+ - Hårt läge: stoppar och inaktiverar HFP systemomfattande för att tvinga högkvalitativ A2DP-uppspelning.
+   Bluetooth-hörlurens mikrofon förblir otillgänglig medan Hårt läge är aktiv.
+ - Återställ: återställer exakt start- och Köra/Stoppa-tillståndet som sparats av Hårt läge.
+   Om ingen säkerhetskopia finns används Manuella + Kör återställningsstandarder.
+ - Byt språk: öppnar hela språkmenyn och kommer ihåg ditt val.
+   Vid första körningen detekteras gränssnittets språk från dina Windows-inställningar.
+
+Viktig begränsning:
+ - Bluetooth Classic kan inte ge uppspelning av A2DP-kvalitet medan dess HFP-mikrofon är aktivt i bruk.
+   Mjuk återställning kan rensa en fastnade session, men kan inte ta bort denna protokollbegränsning.
+
+Säkerhet:
+ - Status kräver inte Administratör.
+ - Ändring av tjänster kräver Administratör.
+ - Hårt läge skapar en säkerhetskopia innan tjänstekonfigurationen ändras.
+ - Upprepade körningar av Hårt läge bevarar den första säkerhetskopian av originaltillståndet.
+ - Återställning behåller säkerhetskopian om någon del av återställningen misslyckas.
+ - Hårt läge påverkar alla Bluetooth Classic-headset på denna Windows-installation.
+
+Felsökning:
+ - Stäng spel, webbläsare, röstchatt och inspelningsappar innan mjuk återställning.
+ - Om mjuk återställning inte återställer stereokvaliteten, använd Hårt läge.
+ - Om Hårt läge har inaktiverat headsetmikrofonen, använd Återställ för att återgå till föregående tillstånd.
+ - Anslut headsetet igen eller starta om ljuduppspelningen efter en operation om en app har cachat den tidigare ljudvägen.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

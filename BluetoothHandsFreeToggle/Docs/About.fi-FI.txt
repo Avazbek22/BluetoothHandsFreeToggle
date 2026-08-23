@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle on Windows-apuohjelma, joka palauttaa korkealaatuisen Bluetooth Classic -kuulokkeen toiston.
+
+Ominaisuudet:
+ - Turvallinen pehmeä nollaus, joka pitää HFP-mikrofonin käytettävissä
+ - Pakotettu tila, joka asettaa etusijalle toiston laadun
+ - Varmuuskopiopohjainen alkuperäisen palvelutilan palautus
+ - Käyttöliittymä lokalisoitu 30 laajasti käytetyksi kieleksi
+ - Kohdennettu interaktiivinen konsolivalikko
+
+Tämä apuohjelma hallinnoi konservatiivista luetteloa Windowsin HFP-palveluista. Se ei poista ajureita, poista Bluetooth-pariliitoksia tai muuta kuulokkeiden laiteohjelmistoa.
+
+Tekijä:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Lisenssi:
+ - MIT

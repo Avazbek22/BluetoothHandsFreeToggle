@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle là một tiện ích Windows để khôi phục phát lại tai nghe Bluetooth Classic chất lượng cao.
+
+Tính năng:
+ - Đặt lại mềm an toàn giữ cho micrô HFP luôn khả dụng
+ - Chế độ cưỡng bức ưu tiên chất lượng phát lại
+ - Khôi phục dựa trên sao lưu trạng thái dịch vụ gốc
+ - Giao diện được địa phương hóa sang 30 ngôn ngữ phổ biến
+ - Menu điều khiển tương tác tập trung
+
+Tiện ích quản lý một danh sách bảo thủ các dịch vụ HFP của Windows. Nó không gỡ cài đặt trình điều khiển, xóa kết nối Bluetooth hay thay đổi phần mềm của tai nghe.
+
+Tác giả:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Giấy phép:
+ - MIT

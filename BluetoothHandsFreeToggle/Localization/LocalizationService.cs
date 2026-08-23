@@ -17,6 +17,7 @@ public sealed class LocalizationService
     {
         _preferenceStore = preferenceStore
                            ?? throw new ArgumentNullException(nameof(preferenceStore));
+        _ = AppLanguageCatalog.Get(initialLanguage);
         CurrentLanguage = initialLanguage;
     }
 
@@ -24,18 +25,9 @@ public sealed class LocalizationService
 
     public void SetLanguage(AppLanguage language)
     {
+        _ = AppLanguageCatalog.Get(language);
         CurrentLanguage = language;
         _preferenceStore.Save(language);
-    }
-
-    public AppLanguage ToggleLanguage()
-    {
-        var nextLanguage = CurrentLanguage == AppLanguage.English
-            ? AppLanguage.Russian
-            : AppLanguage.English;
-
-        SetLanguage(nextLanguage);
-        return nextLanguage;
     }
 
     public string Get(string key)
@@ -53,16 +45,18 @@ public sealed class LocalizationService
     }
 
     public string Format(string key, params object?[] arguments)
-        => string.Format(CultureInfo.CurrentCulture, Get(key), arguments);
+        => string.Format(
+            AppLanguageCatalog.Get(CurrentLanguage).Culture,
+            Get(key),
+            arguments);
 
     private static Dictionary<
         AppLanguage,
         IReadOnlyDictionary<string, string>> LoadResources()
-        => new()
-        {
-            [AppLanguage.English] = LoadLanguageResources("en"),
-            [AppLanguage.Russian] = LoadLanguageResources("ru")
-        };
+        => AppLanguageCatalog.All.ToDictionary(
+            definition => definition.Language,
+            definition => (IReadOnlyDictionary<string, string>)
+                LoadLanguageResources(definition.ResourceCode));
 
     private static Dictionary<string, string> LoadLanguageResources(string languageCode)
     {

@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle przywraca normalne odtwarzanie stereo, gdy system Windows pozostawia klasyczny zestaw słuchawkowy Bluetooth w trybie niskiej jakości rozmowy HFP.
+
+Tryby:
+ - Pobierz status: odczytuje obsługiwane usługi HFP i stan kopii zapasowej. Nie wprowadza żadnych zmian.
+ - Miękki reset: ponownie uruchamia tylko aktywne usługi HFP, nie zmieniając ich typu uruchamiania.
+   Używaj, gdy tryb rozmowy pozostał aktywny po tym, jak aplikacja przestała używać mikrofonu.
+ - Tryb wymuszony: zatrzymuje i wyłącza system HFP w całym systemie, aby wymusić odtwarzanie A2DP w wysokiej jakości.
+   Mikrofon słuchawek Bluetooth pozostaje niedostępny podczas aktywnego trybu Tryb wymuszony.
+ - Przywracanie: dokładnie przywraca stan uruchamiania oraz stan Uruchomiony/Zatrzymany zapisany przez Tryb wymuszony.
+   Jeśli nie istnieje kopia zapasowa, używa domyślnych ustawień odzyskiwania Ręczne + Działający.
+ - Zmień język: otwiera pełną listę języków i zapamiętuje Twój wybór.
+   Przy pierwszym uruchomieniu język interfejsu jest wykrywany na podstawie ustawień Windows.
+
+Ważne ograniczenie:
+ - Bluetooth Classic nie może zapewnić odtwarzania w jakości A2DP podczas aktywnego korzystania z mikrofonu HFP.
+   Miękki reset może usunąć zawieszoną sesję, ale nie może usunąć tego ograniczenia protokołu.
+
+Bezpieczeństwo:
+ - Stan nie wymaga uprawnień Administratora.
+ - Zmiana usług wymaga uprawnień Administratora.
+ - Tryb wymuszony tworzy kopię zapasową przed zmianą konfiguracji usługi.
+ - Powtarzające się uruchomienia Tryb wymuszony zachowują pierwszą kopię zapasową pierwotnego stanu.
+ - Przywracanie zachowuje kopię zapasową, jeśli jakakolwiek część odzyskiwania się nie powiedzie.
+ - Tryb wymuszony wpływa na wszystkie zestawy słuchawkowe Bluetooth Classic na tej instalacji Windows.
+
+Rozwiązywanie problemów:
+ - Zamknij gry, przeglądarki, czat głosowy i aplikacje do nagrywania przed miękkim resetem.
+ - Jeśli miękki reset nie przywraca jakości stereo, użyj Tryb wymuszony.
+ - Jeśli Tryb wymuszony wyłączył mikrofon w zestawie słuchawkowym, użyj Przywróć, aby powrócić do poprzedniego stanu.
+ - Ponownie podłącz zestaw słuchawkowy lub uruchom odtwarzanie dźwięku po operacji, jeśli aplikacja zapisała w pamięci poprzednią trasę audio.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

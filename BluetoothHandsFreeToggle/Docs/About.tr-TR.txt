@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle, yüksek kaliteli Bluetooth Classic kulaklık oynatımını kurtarmak için bir Windows aracıdır.
+
+Özellikler:
+ - HFP mikrofonunu kullanılabilir tutan güvenli yumuşak sıfırlama
+ - Zorunlu mod, oynatma kalitesini önceliklendiren
+ - Orijinal servis durumunun yedekleme tabanlı geri yüklemesi
+ - 30 yaygın olarak kullanılan dile çevrilmiş arayüz
+ - Odaklanmış etkileşimli konsol menüsü
+
+Bu yardımcı program, muhafazakar bir Windows HFP hizmetleri listesini yönetir. Sürücüleri kaldırmaz, Bluetooth eşlemelerini silmez veya kulaklık yazılımını değiştirmez.
+
+Yazar:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Lisans:
+ - MIT

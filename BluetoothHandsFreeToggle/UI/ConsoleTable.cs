@@ -39,18 +39,21 @@ public static class ConsoleTable
     {
         var widths = new int[headers.Length];
         for (var index = 0; index < headers.Length; index++)
-            widths[index] = headers[index].Length;
+            widths[index] = ConsoleText.GetDisplayWidth(headers[index]);
 
         foreach (var row in rows)
         {
             for (var index = 0; index < row.Length; index++)
-                widths[index] = Math.Max(widths[index], row[index].Length);
+                widths[index] = Math.Max(
+                    widths[index],
+                    ConsoleText.GetDisplayWidth(row[index]));
         }
 
         string FormatLine(string[] columns)
             => string.Join(
                 "  ",
-                columns.Select((column, index) => column.PadRight(widths[index])));
+                columns.Select((column, index) =>
+                    ConsoleText.PadRight(column, widths[index])));
 
         ConsoleHelpers.WithColor(ConsoleColor.DarkCyan, () =>
         {

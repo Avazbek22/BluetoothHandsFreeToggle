@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle restaura la reproducción estéreo normal cuando Windows deja un auricular Bluetooth clásico en modo de llamada HFP de baja calidad.
+
+Modos:
+ - Obtener estado: lee los servicios HFP soportados y el estado de respaldo. No se realizan cambios.
+ - Reinicio suave: reinicia solo los servicios HFP activos sin cambiar su tipo de inicio.
+   Úselo cuando el modo de llamada permanezca activo después de que una aplicación deje de usar el micrófono.
+ - Modo estricto: detiene y desactiva HFP a nivel del sistema para forzar la reproducción de A2DP de alta calidad.
+   El micrófono del auricular Bluetooth permanece no disponible mientras Modo estricto está activo.
+ - Restaurar: devuelve exactamente el estado de inicio y Ejecutando/Detenido guardado por Modo estricto.
+   Si no existe copia de seguridad, utiliza los valores predeterminados de Recuperación Manual + Ejecutando.
+ - Cambiar idioma: abre la lista completa de idiomas y recuerda tu elección.
+   En la primera ejecución, el idioma de la interfaz se detecta a partir de tus preferencias de Windows.
+
+Limitación importante:
+ - Bluetooth Clásico no puede proporcionar reproducción de calidad A2DP mientras su micrófono HFP está activo.
+   Un reinicio suave puede despejar una sesión bloqueada, pero no puede eliminar esta limitación del protocolo.
+
+Seguridad:
+ - El estado no requiere Administrador.
+ - Cambiar servicios requiere Administrador.
+ - Modo estricto crea una copia de seguridad antes de cambiar la configuración del servicio.
+ - Las ejecuciones repetidas de Modo estricto preservan la primera copia de seguridad del estado original.
+ - La restauración mantiene la copia de seguridad si alguna parte de la recuperación falla.
+ - Modo estricto afecta a todos los auriculares Bluetooth Clásicos en esta instalación de Windows.
+
+Solución de problemas:
+ - Cierra juegos, navegadores, chat de voz y aplicaciones de grabación antes del reinicio suave.
+ - Si el reinicio suave no restaura la calidad estéreo, use Modo estricto.
+ - Si Modo estricto deshabilitó el micrófono del auricular, use Restaurar para volver al estado anterior.
+ - Vuelva a conectar el auricular o reinicie la reproducción de audio después de una operación si una aplicación almacenó en caché la ruta de audio anterior.
+
+Proyecto:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

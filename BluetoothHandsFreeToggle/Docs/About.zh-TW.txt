@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle 是一款 Windows 工具，用於恢復高品質藍牙經典耳機播放。
+
+功能：
+ - 安全軟重置，可保持 HFP 麥克風可用
+ -硬模式優先考慮播放品質
+ - 基於備份的原始服務狀態還原
+ - 介面已本地化為 30 種常用語言
+ - 專注的互動式主控台選單
+
+該工具管理一個保守的 Windows HFP 服務清單。它不會卸載驅動程式、移除藍牙配對或更改耳機固件。
+
+作者：
+ - Avazbek22
+
+GitHub：
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+授權：
+ - MIT

@@ -18,6 +18,7 @@
   </a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10">
+  <img src="https://img.shields.io/badge/languages-30-EF2D5E?style=flat-square" alt="30 interface languages">
   <img src="https://img.shields.io/github/license/Avazbek22/BluetoothHandsFreeToggle?style=flat-square" alt="MIT license">
   <img src="https://img.shields.io/github/repo-size/Avazbek22/BluetoothHandsFreeToggle?style=flat-square" alt="Repository size">
 </p>
@@ -27,6 +28,7 @@
   <a href="#typical-use-cases">Use cases</a> •
   <a href="#choose-your-mode">Modes</a> •
   <a href="#quick-start">Quick start</a> •
+  <a href="#languages">Languages</a> •
   <a href="#troubleshooting-playbook">Troubleshooting</a> •
   <a href="#frequently-asked-questions">FAQ</a> •
   <a href="#build-from-source">Build</a>
@@ -69,7 +71,7 @@ Additional highlights:
 - Hard mode prioritizes high-quality playback.
 - Restore returns the exact saved service startup and running state.
 - Final state verification after every operation.
-- English and Russian application interface with automatic language detection.
+- 30-language interface with smart Windows language detection and a saved manual choice.
 - Built-in help, status reporting, and safe handling of partial failures.
 
 ## Typical use cases
@@ -141,6 +143,19 @@ The selected application language is stored in:
 ```text
 %AppData%\BluetoothHandsFreeToggle\ui-settings.json
 ```
+
+## Languages
+
+On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI language preferences and selects the first supported match. Regional fallbacks are handled deliberately: Traditional and Simplified Chinese stay separate, Spanish distinguishes Spain and Latin America, Portuguese distinguishes Brazil and Portugal, and Norwegian variants resolve to Bokmål. **Change language** opens the complete numbered list, and the selected language is remembered for future runs.
+
+| | Supported interface languages |
+|:--|:--|
+| **Core** | English, Русский |
+| **East Asia** | 简体中文, 繁體中文, 日本語, 한국어 |
+| **Western Europe** | Deutsch, Français, Español (España), Español (Latinoamérica), Português (Brasil), Português (Portugal), Italiano, Nederlands |
+| **Northern Europe** | Svenska, Dansk, Norsk bokmål, Suomi |
+| **Central & Eastern Europe** | Polski, Українська, Čeština, Magyar, Română, Ελληνικά, Български |
+| **Türkiye & Southeast Asia** | Türkçe, ไทย, Bahasa Indonesia, Bahasa Melayu, Tiếng Việt |
 
 ## Troubleshooting playbook
 
@@ -255,7 +270,7 @@ The codebase keeps Windows-specific operations separate from recovery logic:
 BluetoothHandsFreeToggle/
 ├── App/            Application startup, elevation, and documentation
 ├── Core/           Soft, Hard, Restore, status, and backup logic
-├── Localization/   English and Russian resources
+├── Localization/   30-language resources and smart culture matching
 ├── UI/             Interactive console interface
 └── Windows/        Service Control Manager integration
 
@@ -301,6 +316,18 @@ Release files are placed under:
 ```text
 artifacts/release/v<version>/
 ```
+
+Prepare and validate the next WinGet update from those local release artifacts:
+
+```powershell
+.\scripts\Publish-WinGet.ps1 `
+  -Mode Update `
+  -LocalArtifactsDirectory .\artifacts\release\v<version> `
+  -LocalOnly `
+  -NonInteractive
+```
+
+This produces x64/Arm64 manifests plus localized metadata for all 30 interface languages without submitting a pull request. After the matching GitHub release is public, rerun without `-LocalArtifactsDirectory`; add `-InstallTest` for the public installer check and `-Submit` only when you intentionally want WingetCreate to open the PR.
 
 ## Support the project
 

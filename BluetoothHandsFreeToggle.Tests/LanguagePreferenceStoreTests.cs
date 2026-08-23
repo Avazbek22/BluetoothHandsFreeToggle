@@ -22,10 +22,10 @@ public sealed class LanguagePreferenceStoreTests
         var settingsPath = Path.Combine(directory.Path, "ui-settings.json");
         var store = new FileLanguagePreferenceStore(settingsPath);
 
-        store.Save(AppLanguage.Russian);
+        store.Save(AppLanguage.PortugueseBrazil);
 
-        Assert.Equal(AppLanguage.Russian, store.Load());
-        Assert.Contains("\"ru\"", File.ReadAllText(settingsPath), StringComparison.Ordinal);
+        Assert.Equal(AppLanguage.PortugueseBrazil, store.Load());
+        Assert.Contains("\"pt-BR\"", File.ReadAllText(settingsPath), StringComparison.Ordinal);
         Assert.Empty(Directory.EnumerateFiles(directory.Path, "*.tmp"));
     }
 

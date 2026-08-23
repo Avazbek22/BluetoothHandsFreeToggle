@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle obnovuje normální stereo přehrávání, když Windows zanechá Bluetooth Classic headset v režimu hovoru HFP s nízkou kvalitou.
+
+Režimy:
+ - Získat stav: čte podporované služby HFP a záložní stav. Neprovádějí se žádné změny.
+ - Měkký reset: restartuje pouze aktivní služby HFP, aniž by se změnil jejich typ spouštění.
+   Použijte, když režim hovoru zůstane aktivní po ukončení aplikace používající mikrofon.
+ - Vynucený režim: zastaví a deaktivuje HFP systémově, aby vynutil přehrávání A2DP vysoké kvality.
+   Mikrofon Bluetooth sluchátek zůstává nedostupný, dokud je Vynucený režim aktivní.
+ - Obnovení: přesně vrátí stav spuštění a Stav Spuštěno/Zastaveno uložený Vynucený režim.
+   Pokud neexistuje žádná záloha, používá výchozí hodnoty obnovy Manuálně + Běží.
+ - Změnit jazyk: otevře celý seznam jazyků a zapamatuje si váš výběr.
+   Při prvním spuštění je jazyk rozhraní zjištěn podle vašich preferencí ve Windows.
+
+Důležité omezení:
+ - Bluetooth Classic nemůže poskytovat přehrávání v kvalitě A2DP, pokud je současně aktivně používán mikrofon HFP.
+   Měkký reset může vymazat zaseknutou relaci, ale nemůže odstranit toto omezení protokolu.
+
+Bezpečnost:
+ - Status nevyžaduje oprávnění administrátora.
+ - Změna služeb vyžaduje oprávnění administrátora.
+ - Vynucený režim vytvoří zálohu před změnou konfigurace služby.
+ - Opakované spuštění Vynucený režim zachovává první zálohu původního stavu.
+ - Obnovení zachová zálohu, pokud se jakákoli část obnovy nezdaří.
+ - Vynucený režim ovlivňuje všechny Bluetooth Classic sluchátka na této instalaci Windows.
+
+Řešení problémů:
+ - Před provedením Soft resetu zavřete hry, prohlížeče, hlasové hovory a aplikace pro nahrávání.
+ - Pokud měkký reset neobnoví stereofonní kvalitu, použijte Vynucený režim.
+ - Pokud Vynucený režim deaktivoval mikrofon sluchátek, použijte Obnovit k návratu do předchozího stavu.
+ - Připojte sluchátka znovu nebo restartujte přehrávání zvuku po operaci, pokud aplikace uložila předchozí zvukovou cestu.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle stellt die normale Stereo-Wiedergabe wieder her, wenn Windows ein Bluetooth Classic-Headset im Low-Quality-HFP-Anrufmodus belässt.
+
+Modi:
+ - Status abrufen: liest die unterstützten HFP-Dienste und den Sicherungszustand. Es werden keine Änderungen vorgenommen.
+ - Soft-Reset: startet nur aktive HFP-Dienste neu, ohne deren Starttyp zu ändern.
+   Verwenden Sie dies, wenn der Anrufmodus aktiv bleibt, nachdem eine App die Nutzung des Mikrofons beendet hat.
+ - Hard-Modus: stoppt und deaktiviert HFP systemweit, um hochqualitative A2DP-Wiedergabe zu erzwingen.
+   Das Mikrofon des Bluetooth-Headsets bleibt während der Aktivierung von Hard-Modus nicht verfügbar.
+ - Wiederherstellen: stellt genau den beim Start und im laufenden/gestoppten Zustand von Hard-Modus gespeicherten Zustand wieder her.
+   Wenn kein Backup vorhanden ist, werden die Standards für manuelle + laufende Wiederherstellung verwendet.
+ - Sprache ändern: öffnet die vollständige Sprachenliste und merkt sich Ihre Auswahl.
+   Beim ersten Start wird die Schnittstellensprache aus Ihren Windows-Einstellungen erkannt.
+
+Wichtige Einschränkung:
+ - Bluetooth Classic kann keine A2DP-Qualität wiedergeben, während sein HFP-Mikrofon aktiv verwendet wird.
+   Ein Soft-Reset kann eine hängende Sitzung löschen, aber diese Protokoll-Einschränkung nicht aufheben.
+
+Sicherheit:
+ - Status erfordert keinen Administrator.
+ - Das Ändern von Diensten erfordert Administratorrechte.
+ - Hard-Modus erstellt ein Backup, bevor die Service-Konfiguration geändert wird.
+ - Mehrfache Ausführungen von Hard-Modus bewahren das erste Originalzustands-Backup.
+ - Bei der Wiederherstellung wird das Backup behalten, wenn irgendein Teil der Wiederherstellung fehlschlägt.
+ - Hard-Modus betrifft alle Bluetooth-Classic-Headsets auf dieser Windows-Installation.
+
+Fehlerbehebung:
+ - Schließen Sie Spiele, Browser, Sprachchat- und Aufnahme-Apps vor dem Soft-Reset.
+ - Wenn ein Soft-Reset die Stereoqualität nicht wiederherstellt, verwenden Sie Hard-Modus.
+ - Wenn Hard-Modus das Headset-Mikrofon deaktiviert hat, verwenden Sie Wiederherstellen, um den vorherigen Zustand zurückzugeben.
+ - Schließen Sie das Headset wieder an oder starten Sie die Audiowiedergabe nach einer Operation neu, wenn eine App die vorherige Audioverbindung zwischengespeichert hat.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

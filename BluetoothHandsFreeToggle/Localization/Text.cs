@@ -6,6 +6,8 @@ public static class Text
         new(new InMemoryLanguagePreferenceStore(), AppLanguage.English);
 
     public static AppLanguage CurrentLanguage => _service.CurrentLanguage;
+    public static AppLanguageDefinition CurrentLanguageDefinition
+        => AppLanguageCatalog.Get(CurrentLanguage);
 
     public static void Initialize(LocalizationService service)
         => _service = service ?? throw new ArgumentNullException(nameof(service));
@@ -18,9 +20,6 @@ public static class Text
 
     public static void SetLanguage(AppLanguage language)
         => _service.SetLanguage(language);
-
-    public static AppLanguage ToggleLanguage()
-        => _service.ToggleLanguage();
 
     private sealed class InMemoryLanguagePreferenceStore : ILanguagePreferenceStore
     {

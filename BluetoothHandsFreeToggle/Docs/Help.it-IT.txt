@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle ripristina la riproduzione stereo normale quando Windows lascia un auricolare Bluetooth Classic in modalità chiamata HFP a bassa qualità.
+
+Modalità:
+ - Ottieni stato: legge i servizi HFP supportati e lo stato di backup. Non vengono effettuate modifiche.
+ - Reset soft: riavvia solo i servizi HFP attivi senza modificare il loro tipo di avvio.
+   Utilizzalo quando la modalità chiamata è rimasta attiva dopo che un'app ha smesso di usare il microfono.
+ - Modalità forzata: interrompe e disabilita HFP a livello di sistema per forzare la riproduzione A2DP ad alta qualità.
+   Il microfono del headset Bluetooth rimane non disponibile mentre Modalità forzata è attivo.
+ - Ripristina: ritorna esattamente allo stato di avvio e a quello in Esecuzione/Arrestato salvato da Modalità forzata.
+   Se non esiste alcun backup, utilizza le impostazioni predefinite di recupero Manuale + Esecuzione.
+ - Cambia lingua: apre l'elenco completo delle lingue e ricorda la tua scelta.
+   Al primo avvio, la lingua dell'interfaccia viene rilevata dalle preferenze di Windows.
+
+Limitazione importante:
+ - Il Bluetooth Classic non può fornire riproduzione di qualità A2DP mentre il suo microfono HFP è attivamente in uso.
+   Il reset soft può liberare una sessione bloccata, ma non può rimuovere questa limitazione del protocollo.
+
+Sicurezza:
+ - Lo stato non richiede l'Amministratore.
+ - Modificare i servizi richiede l'Amministratore.
+ - Modalità forzata crea un backup prima di modificare la configurazione del servizio.
+ - Esecuzioni ripetute di Modalità forzata preservano il primo backup dello stato originale.
+ - Il ripristino mantiene il backup se qualsiasi parte del recupero fallisce.
+ - Modalità forzata influisce su tutte le cuffie Bluetooth Classic in questa installazione di Windows.
+
+Risoluzione dei problemi:
+ - Chiudere giochi, browser, chat vocali e app di registrazione prima del reset Soft.
+ - Se il ripristino software non ripristina la qualità stereo, utilizzare Modalità forzata.
+ - Se Modalità forzata ha disabilitato il microfono delle cuffie, utilizzare Ripristina per tornare allo stato precedente.
+ - Ricollega il headset o riavvia la riproduzione audio dopo un'operazione se un'app ha memorizzato nella cache il percorso audio precedente.
+
+Progetto:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

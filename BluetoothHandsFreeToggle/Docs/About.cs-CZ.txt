@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle je utilita pro Windows pro obnovení přehrávání vysoce kvalitního Bluetooth Classic headsetu.
+
+Funkce:
+ - Bezpečný Měkký reset, který zachovává dostupnost mikrofonu HFP
+ - Vynucený režim, který upřednostňuje kvalitu přehrávání
+ - Obnova původního stavu služby založená na záloze
+ - Rozhraní lokalizované do 30 široce používaných jazyků
+ - Zaměřené interaktivní konzolové menu
+
+Tento nástroj spravuje konzervativní seznam služeb Windows HFP. Neodinstaluje ovladače, nemaže párování Bluetooth ani nemění firmware headsetu.
+
+Autor:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Licence:
+ - MIT

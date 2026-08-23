@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle restaura a reprodução estéreo normal quando o Windows deixa um headset Bluetooth Classic no modo de chamada HFP de baixa qualidade.
+
+Modos:
+ - Obter status: lê os serviços HFP suportados e o estado de backup. Nenhuma alteração é feita.
+ - Reinicialização suave: reinicia apenas os serviços HFP ativos sem alterar seu tipo de inicialização.
+   Use quando o modo de chamada permanecer ativo após um aplicativo parar de usar o microfone.
+ - Modo rígido: para e desativa o HFP em todo o sistema para forçar a reprodução de alta qualidade do A2DP.
+   O microfone do headset Bluetooth permanece indisponível enquanto o Modo rígido está ativo.
+ - Restaurar: retorna exatamente ao estado de Inicialização e Executando/Parado salvo pelo Modo rígido.
+   Se não houver backup, ele usa os padrões de recuperação Manual + Executando.
+ - Alterar idioma: abre a lista completa de idiomas e lembra sua escolha.
+   Na primeira execução, o idioma da interface é detectado a partir das preferências do Windows.
+
+Limitação importante:
+ - O Bluetooth Clássico não pode fornecer reprodução com qualidade A2DP enquanto seu microfone HFP estiver em uso ativo.
+   O reset suave pode limpar uma sessão travada, mas não pode remover essa limitação do protocolo.
+
+Segurança:
+ - O status não requer Administrador.
+ - Alterar serviços requer Administrador.
+ - Modo rígido cria um backup antes de alterar a configuração do serviço.
+ - Execuções repetidas do Modo rígido preservam o primeiro backup do estado original.
+ - A restauração mantém o backup se qualquer parte da recuperação falhar.
+ - Modo rígido afeta todos os headsets Bluetooth Classic nesta instalação do Windows.
+
+Solução de problemas:
+ - Feche jogos, navegadores, chat de voz e aplicativos de gravação antes da redefinição suave.
+ - Se o reset suave não restaurar a qualidade estéreo, use Modo rígido.
+ - Se Modo rígido desativou o microfone do headset, use Restaurar para retornar ao estado anterior.
+ - Reconecte o fone de ouvido ou reinicie a reprodução de áudio após uma operação se um aplicativo tiver armazenado em cache a rota de áudio anterior.
+
+Projeto:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle mengembalikan pemutaran stereo normal ketika Windows meninggalkan headset Bluetooth Classic dalam mode panggilan HFP berkualitas rendah.
+
+Mode:
+ - Dapatkan status: membaca layanan HFP yang didukung dan status cadangan. Tidak ada perubahan yang dilakukan.
+ - Reset lembut: memulai ulang hanya layanan HFP aktif tanpa mengubah tipe startup mereka.
+   Gunakan ketika mode panggilan tetap aktif setelah sebuah aplikasi berhenti menggunakan mikrofon.
+ - Mode paksa: menghentikan dan menonaktifkan HFP secara sistemik untuk memaksa pemutaran A2DP berkualitas tinggi.
+   Mikrofon headset Bluetooth tetap tidak tersedia saat Mode paksa aktif.
+ - Pulihkan: mengembalikan persis status startup dan Berjalan/Dihentikan yang disimpan oleh Mode paksa.
+   Jika tidak ada cadangan, ia menggunakan default pemulihan Manual + Berjalan.
+ - Ubah bahasa: membuka daftar bahasa lengkap dan mengingat pilihan Anda.
+   Saat pertama kali dijalankan, bahasa antarmuka dideteksi dari preferensi Windows Anda.
+
+Batasan penting:
+ - Bluetooth Classic tidak dapat memberikan pemutaran kualitas A2DP saat mikrofon HFP-nya sedang digunakan.
+   Reset lembut dapat membersihkan sesi yang macet, tetapi tidak dapat menghapus batasan protokol ini.
+
+Keamanan:
+ - Status tidak memerlukan Administrator.
+ - Mengubah layanan memerlukan Administrator.
+ - Mode paksa membuat cadangan sebelum mengubah konfigurasi layanan.
+ - Pelaksanaan Mode paksa berulang mempertahankan cadangan status asli pertama.
+ - Pemulihan menjaga cadangan jika ada bagian dari pemulihan yang gagal.
+ - Mode paksa mempengaruhi semua headset Bluetooth Classic pada instalasi Windows ini.
+
+Pemecahan masalah:
+ - Tutup game, browser, obrolan suara, dan aplikasi perekaman sebelum reset lembut.
+ - Jika Reset ringan tidak mengembalikan kualitas stereo, gunakan Mode paksa.
+ - Jika Mode paksa menonaktifkan mikrofon headset, gunakan Pulihkan untuk mengembalikan kondisi sebelumnya.
+ - Sambungkan kembali headset atau mulai ulang pemutaran audio setelah operasi jika sebuah aplikasi menyimpan rute audio sebelumnya.
+
+Proyek:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

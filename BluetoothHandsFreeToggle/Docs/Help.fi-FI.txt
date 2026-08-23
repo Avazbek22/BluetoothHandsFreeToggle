@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle palauttaa normaalin stereotoiston, kun Windows jättää Bluetooth Classic -kuulokkeet matalan laadun HFP-puhelutilaan.
+
+Tilat:
+ - Hae tila: lukee tuetut HFP-palvelut ja varmistaa tilan. Muutoksia ei tehdä.
+ - Pehmeä nollaus: käynnistää vain aktiiviset HFP-palvelut uudelleen muuttamatta niiden käynnistystyyppiä.
+   Käytä sitä, kun puhelutila pysyi aktiivisena sen jälkeen, kun sovellus lopetti mikrofonin käytön.
+ - Pakotettu tila: pysäyttää ja poistaa käytöstä HFP:n koko järjestelmässä pakottaen korkealaatuisen A2DP-toiston.
+   Bluetooth-kuulokemikrofoni on edelleen poissa käytöstä, kun Pakotettu tila on aktiivinen.
+ - Palauta: palauttaa täsmälleen Pakotettu tila:n tallentaman käynnistys- ja Ajetun/Pysäytetyn tilan.
+   Jos varmuuskopiota ei ole, se käyttää Manuaalista + Käynnissä oleva palautuksen oletuksia.
+ - Vaihda kieli: avaa koko kieliluettelon ja muistaa valintasi.
+   Ensimmäisellä käyttökerralla käyttöliittymän kieli tunnistetaan Windows-asetuksistasi.
+
+Tärkeä rajoitus:
+ - Bluetooth Classic ei voi tarjota A2DP-laatuista toistoa, kun sen HFP-mikrofoni on aktiivisessa käytössä.
+   Pehmeä nollaus voi poistaa jumissa olevan istunnon, mutta se ei voi poistaa tätä protokollarajoitusta.
+
+Turvallisuus:
+ - Tila ei vaadi järjestelmänvalvojaa.
+ - Palvelujen muuttaminen vaatii järjestelmänvalvojan oikeudet.
+ - Pakotettu tila luo varmuuskopion ennen palvelukonfiguraation muuttamista.
+ - Toistuvat Pakotettu tila-ajot säilyttävät ensimmäisen alkuperäisen tilan varmuuskopion.
+ - Palautus säilyttää varmuuskopion, jos osa palautuksesta epäonnistuu.
+ - Pakotettu tila vaikuttaa kaikkiin Bluetooth Classic -kuulokkeisiin tässä Windows-asennuksessa.
+
+Vianmääritys:
+ - Sulje pelit, selaimet, äänichatti- ja tallennussovellukset ennen Pehmeää nollautusta.
+ - Jos pehmeä nollaus ei palautta stereolaadua, käytä Pakotettu tila.
+ - Jos Pakotettu tila poisti kuulokemikrofonin käytöstä, käytä Palauta palauttaaksesi aiemman tilan.
+ - Yhdistä kuulokkeet uudelleen tai käynnistä äänentoisto uudelleen toimenpiteen jälkeen, jos sovellus tallensi aiemman äänireitin välimuistiin.
+
+Projekti:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

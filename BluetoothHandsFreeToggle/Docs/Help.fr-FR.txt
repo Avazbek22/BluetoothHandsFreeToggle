@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle restaure la lecture stéréo normale lorsque Windows laisse un casque Bluetooth classique en mode appel HFP de faible qualité.
+
+Modes :
+ - Obtenir le statut : lit les services HFP pris en charge et l'état de sauvegarde. Aucun changement n'est effectué.
+ - Réinitialisation douce : redémarre uniquement les services HFP actifs sans modifier leur type de démarrage.
+   À utiliser lorsque le mode appel reste actif après qu'une application a cessé d'utiliser le microphone.
+ - Mode forcé : arrête et désactive le HFP à l'échelle du système pour forcer la lecture A2DP de haute qualité.
+   Le microphone du casque Bluetooth reste indisponible tant que Mode forcé est actif.
+ - Restaurer : retourne exactement à l'état de démarrage et de fonctionnement/arrêt enregistré par Mode forcé.
+   S’il n’existe pas de sauvegarde, il utilise les valeurs par défaut de récupération Manuelle + En cours d’exécution.
+ - Changer de langue : ouvre la liste complète des langues et mémorise votre choix.
+   Lors du premier démarrage, la langue de l'interface est détectée à partir de vos préférences Windows.
+
+Limitation importante :
+ - Le Bluetooth classique ne peut pas fournir une lecture de qualité A2DP lorsque son microphone HFP est activement utilisé.
+   Une réinitialisation douce peut libérer une session bloquée, mais elle ne peut pas supprimer cette limitation du protocole.
+
+Sécurité :
+ - L'état ne nécessite pas le rôle d'administrateur.
+ - Modifier les services nécessite le rôle d'administrateur.
+ - Mode forcé crée une sauvegarde avant de modifier la configuration du service.
+ - Les exécutions répétées de Mode forcé conservent la première sauvegarde de l'état d'origine.
+ - La restauration conserve la sauvegarde si une partie de la récupération échoue.
+ - Mode forcé affecte tous les casques Bluetooth Classic sur cette installation Windows.
+
+Dépannage :
+ - Fermez les jeux, navigateurs, applications de chat vocal et d'enregistrement avant la réinitialisation douce.
+ - Si la réinitialisation douce ne restaure pas la qualité stéréo, utilisez Mode forcé.
+ - Si Mode forcé a désactivé le microphone du casque, utilisez Restaurer pour revenir à l'état précédent.
+ - Reconnectez le casque ou redémarrez la lecture audio après une opération si une application a mis en cache la route audio précédente.
+
+Projet :
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

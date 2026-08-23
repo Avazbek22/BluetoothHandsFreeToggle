@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle gjenoppretter normal stereospilling når Windows lar et Bluetooth Classic-headset være i lavkvalitets HFP-samtalemodus.
+
+Moduser:
+ - Hent status: leser de støttede HFP-tjenestene og backup-tilstanden. Ingen endringer gjøres.
+ - Myk omstart: starter kun aktive HFP-tjenester på nytt uten å endre oppstartstypen deres.
+   Bruk det når samtalemodus forblir aktiv etter at en app har sluttet å bruke mikrofonen.
+ - Hard modus: stopper og deaktiverer HFP systemomfattende for å tvinge høy-kvalitets A2DP-avspilling.
+   Bluetooth-headsettets mikrofon forblir utilgjengelig mens Hard modus er aktiv.
+ - Gjenopprett: returnerer nøyaktig oppstart og Kjørende/Stoppet-tilstand lagret av Hard modus.
+   Hvis ingen sikkerhetskopi finnes, bruker den Manuell + Kjørende gjenopprettingsstandard.
+ - Endre språk: åpner hele språklisten og husker valget ditt.
+   Ved første oppstart blir grensesnittspråket oppdaget fra dine Windows-innstillinger.
+
+Viktig begrensning:
+ - Bluetooth Classic kan ikke gi A2DP-kvalitetsavspilling mens dens HFP-mikrofon er aktivt i bruk.
+   Myk tilbakestilling kan fjerne en fastlåst økt, men kan ikke fjerne denne protokollbegrensningen.
+
+Sikkerhet:
+ - Status krever ikke Administrator.
+ - Endring av tjenester krever Administrator.
+ - Hard modus lager en backup før tjenestekonfigurasjonen endres.
+ - Gjentatte kjøringer av Hard modus bevarer den første opprinnelige tilstands-backupen.
+ - Gjenoppretting beholder sikkerhetskopien hvis noen del av gjenopprettingen mislykkes.
+ - Hard modus påvirker alle Bluetooth Classic-hodesett på denne Windows-installasjonen.
+
+Feilsøking:
+ - Lukk spill, nettlesere, talechat- og opptaksapper før Soft-tilbakestilling.
+ - Hvis mjuk tilbakestilling ikke gjenoppretter stereokvaliteten, bruk Hard modus.
+ - Hvis Hard modus deaktiverte hodesettets mikrofon, bruk Gjenopprett for å returnere til forrige tilstand.
+ - Koble til headsettet på nytt eller start lydavspilling på nytt etter en operasjon hvis en app har bufret forrige lydvei.
+
+Prosjekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

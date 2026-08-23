@@ -1,12 +1,13 @@
+using System.Collections.Concurrent;
 using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle.App;
 
 public static class DocumentationProvider
 {
-    private static readonly Lazy<
-        IReadOnlyDictionary<(DocumentationDocument Document, AppLanguage Language), string[]>>
-        CachedDocuments = new(LoadDocuments);
+    private static readonly ConcurrentDictionary<
+        (DocumentationDocument Document, AppLanguage Language),
+        string[]> CachedDocuments = new();
 
     public static IReadOnlyList<string> GetLines(DocumentationDocument document)
         => GetLines(document, Text.CurrentLanguage);
@@ -17,38 +18,35 @@ public static class DocumentationProvider
     {
         try
         {
-            return CachedDocuments.Value[(document, language)];
+            return CachedDocuments.GetOrAdd(
+                (document, language),
+                key => LoadDocumentLines(key.Document, key.Language));
+        }
+        catch (Exception exception) when (language is not AppLanguage.English)
+        {
+            try
+            {
+                return CachedDocuments.GetOrAdd(
+                    (document, AppLanguage.English),
+                    key => LoadDocumentLines(key.Document, key.Language));
+            }
+            catch
+            {
+                return BuildUnavailableDocument(exception);
+            }
         }
         catch (Exception exception)
         {
-            return
-            [
-                Text.Get("documentation.unavailable"),
-                Text.Format("documentation.reason", exception.Message)
-            ];
+            return BuildUnavailableDocument(exception);
         }
     }
 
-    private static Dictionary<
-        (DocumentationDocument Document, AppLanguage Language),
-        string[]> LoadDocuments()
-        => new()
-        {
-            [(DocumentationDocument.Help, AppLanguage.English)] =
-                LoadDocumentLines("Help", AppLanguage.English),
-            [(DocumentationDocument.Help, AppLanguage.Russian)] =
-                LoadDocumentLines("Help", AppLanguage.Russian),
-            [(DocumentationDocument.About, AppLanguage.English)] =
-                LoadDocumentLines("About", AppLanguage.English),
-            [(DocumentationDocument.About, AppLanguage.Russian)] =
-                LoadDocumentLines("About", AppLanguage.Russian)
-        };
-
     private static string[] LoadDocumentLines(
-        string documentName,
+        DocumentationDocument document,
         AppLanguage language)
     {
-        var languageCode = AppLanguageCode.ToCode(language);
+        var documentName = document.ToString();
+        var languageCode = AppLanguageCatalog.Get(language).ResourceCode;
         var assembly = typeof(DocumentationProvider).Assembly;
         var suffix = $".Docs.{documentName}.{languageCode}.txt";
         var resourceName = assembly
@@ -70,6 +68,13 @@ public static class DocumentationProvider
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Split('\n');
     }
+
+    private static string[] BuildUnavailableDocument(Exception exception)
+        =>
+        [
+            Text.Get("documentation.unavailable"),
+            Text.Format("documentation.reason", exception.Message)
+        ];
 }
 
 public enum DocumentationDocument

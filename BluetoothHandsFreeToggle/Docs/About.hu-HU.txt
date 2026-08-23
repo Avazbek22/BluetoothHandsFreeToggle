@@ -1,0 +1,19 @@
+A BluetoothHandsFreeToggle egy Windows segédprogram a kiváló minőségű Bluetooth Classic headset lejátszás helyreállításához.
+
+Jellemzők:
+ - Biztonságos szoftveres visszaállítás, amely megőrzi a HFP mikrofon elérhetőségét
+ - Kényszerített mód, amely a lejátszási minőséget részesíti előnyben
+ - Eredeti szolgáltatási állapot mentésalapú helyreállítása
+ - Felület 30 széles körben használt nyelvre lokalizálva
+ - Központozott interaktív konzolmenü
+
+A segédprogram egy konzervatív listát kezel a Windows HFP szolgáltatásokról. Nem távolít el illesztőprogramokat, nem törli a Bluetooth párosításokat, és nem változtatja a headset firmware-ét.
+
+Szerző:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Licenc:
+ - MIT

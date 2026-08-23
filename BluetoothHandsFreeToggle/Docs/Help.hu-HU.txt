@@ -1,0 +1,33 @@
+A BluetoothHandsFreeToggle visszaállítja a normál sztereó lejátszást, amikor a Windows egy Bluetooth Classic headsetet alacsony minőségű HFP hívás módba hagy.
+
+Módok:
+ - Állapot lekérése: olvassa a támogatott HFP szolgáltatásokat és a mentett állapotot. Nincs változtatás.
+ - Szoft reset: újraindítja csak az aktív HFP szolgáltatásokat anélkül, hogy megváltoztatná az indítási típusukat.
+   Használd, amikor a hívás mód aktív marad, miután egy alkalmazás abbahagyta a mikrofon használatát.
+ - Kényszerített mód: leállítja és rendszer-szinten letiltja a HFP-t a magas minőségű A2DP lejátszás kényszerítéséhez.
+   A Bluetooth headset mikrofonja továbbra sem elérhető, amíg a Kényszerített mód aktív.
+ - Visszaállítás: pontosan visszaadja a Kényszerített mód által elmentett indítási és Futó/Leállított állapotot.
+   Ha nincs mentés, a Kézi + Futtatás helyreállítási alapértelmezéseket használja.
+ - Nyelv változtatása: megnyitja a teljes nyelvlistát és megjegyzi a választását.
+   Az első futtatáskor a felület nyelvét a Windows beállításai alapján érzékeli.
+
+Fontos korlátozás:
+ - A Bluetooth Classic nem tud A2DP minőségű lejátszást biztosítani, miközben a HFP mikrofonja aktívan használatban van.
+   A szoftveres visszaállítás törölhet egy beragadt munkamenetet, de nem tudja eltávolítani ezt a protokollkorlátozást.
+
+Biztonság:
+ - Az állapot nem igényel rendszergazdai jogosultságot.
+ - A szolgáltatások módosítása rendszergazdai jogosultságot igényel.
+ - A Kényszerített mód biztonsági másolatot készít a szolgáltatás konfigurációjának megváltoztatása előtt.
+ - A Kényszerített mód ismételt futtatásai megőrzik az első eredeti állapotú biztonsági másolatot.
+ - A visszaállítás megtartja a mentést, ha a helyreállítás bármely része sikertelen.
+ - A Kényszerített mód befolyásolja az összes Bluetooth Classic fejhallgatót ezen a Windows telepítésen.
+
+Hibaelhárítás:
+ - Zárj be játékokat, böngészőket, hangcsevegő és rögzítő alkalmazásokat a puha visszaállítás előtt.
+ - Ha a puha visszaállítás nem állítja vissza a sztereó minőséget, használd a Kényszerített mód-et.
+ - Ha a Kényszerített mód letiltotta a fejhallgató mikrofonját, a Visszaállítás használatával állíthatod vissza az előző állapotot.
+ - Csatlakoztassa újra a headsetet vagy indítsa újra a hanglejátszást egy művelet után, ha egy alkalmazás a korábbi hangútvonalat gyorsítótárazta.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

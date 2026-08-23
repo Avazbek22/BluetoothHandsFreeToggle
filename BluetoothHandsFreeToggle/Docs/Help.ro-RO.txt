@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle restaurează redarea stereo normală atunci când Windows lasă un headset Bluetooth Classic în modul de apel HFP de calitate scăzută.
+
+Moduri:
+ - Verifică starea: citește serviciile HFP acceptate și starea de rezervă. Nu se fac modificări.
+ - Resetare soft: repornește doar serviciile HFP active fără a le schimba tipul de pornire.
+   Folosește-l atunci când modul de apel a rămas activ după ce o aplicație a încetat să folosească microfonul.
+ - Mod forțat: oprește și dezactivează sistemic HFP pentru a forța redarea A2DP de înaltă calitate.
+   Microfonul căștii Bluetooth rămâne indisponibil în timp ce Mod forțat este activ.
+ - Restaurare: revine exact la starea la pornire și la starea În execuție/Oprit salvată de Mod forțat.
+   Dacă nu există o copie de rezervă, folosește implicitele de recuperare Manual + Rulat.
+ - Schimbă limba: deschide lista completă de limbi și îți reține alegerea.
+   La prima rulare, limba interfeței este detectată din preferințele Windows.
+
+Limitare importantă:
+ - Bluetooth Classic nu poate oferi redare de calitate A2DP în timp ce microfonul HFP este utilizat activ.
+   Resetarea software poate goli o sesiune blocată, dar nu poate elimina această limitare a protocolului.
+
+Securitate:
+ - Starea nu necesită Administrator.
+ - Schimbarea serviciilor necesită Administrator.
+ - Mod forțat creează un backup înainte de a modifica configurația serviciului.
+ - Rulările repetate ale Mod forțat păstrează primul backup al stării originale.
+ - Restaurarea păstrează copia de rezervă dacă orice parte a recuperării eșuează.
+ - Mod forțat afectează toate căștile Bluetooth Classic de pe această instalare Windows.
+
+Depanare:
+ - Închideți jocurile, browser-ele, aplicațiile de chat vocal și de înregistrare înainte de Resetarea Soft.
+ - Dacă resetarea soft nu restabilește calitatea stereo, folosiți Mod forțat.
+ - Dacă Mod forțat a dezactivat microfonul căștii, folosiți Restaurare pentru a reveni la starea anterioară.
+ - Reconectați căștile sau reporniți redarea audio după o operațiune dacă o aplicație a memorat ruta audio anterioară.
+
+Proiect:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

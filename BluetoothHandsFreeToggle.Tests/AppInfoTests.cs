@@ -24,7 +24,7 @@ public sealed class AppInfoTests
     [Fact]
     public void AppDisplayNameIncludesVersionTag()
     {
-        Assert.Equal("v2.1", AppInfo.AppVersionTag);
-        Assert.Equal("BluetoothHandsFreeToggle v2.1", AppInfo.AppDisplayName);
+        Assert.Equal("v2.2", AppInfo.AppVersionTag);
+        Assert.Equal("BluetoothHandsFreeToggle v2.2", AppInfo.AppDisplayName);
     }
 }

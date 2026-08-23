@@ -3,9 +3,10 @@
   Creates or updates the BluetoothHandsFreeToggle package in winget-pkgs.
 
 .DESCRIPTION
-  Verifies the public GitHub release, generates WinGet manifests for x64 and
-  Arm64, validates them, optionally tests local installation, and can submit
-  the pull request through WingetCreate.
+  Generates x64 and Arm64 WinGet manifests with localized metadata, validates
+  them, optionally tests installation from a public GitHub release, and submits
+  a pull request only when -Submit is explicitly supplied. Local release
+  artifacts can be used to prepare manifests before the GitHub release exists.
 #>
 [CmdletBinding()]
 param(
@@ -29,6 +30,10 @@ param(
     [switch]$NonInteractive,
 
     [switch]$PlanOnly,
+
+    [string]$LocalArtifactsDirectory = "",
+
+    [string]$PlannedReleaseDate = "",
 
     [string]$OutDirectory = ""
 )
@@ -55,6 +60,23 @@ function Ensure-Command {
 
     if ($null -eq (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command not found: $Name"
+    }
+}
+
+function Ensure-WingetCreate {
+    Ensure-Command -Name "wingetcreate"
+
+    try {
+        & wingetcreate info *> $null
+        if ($LASTEXITCODE -ne 0) {
+            throw "exit code $LASTEXITCODE"
+        }
+    }
+    catch {
+        throw (
+            "WingetCreate is installed but could not start. Repair or update " +
+            "Microsoft.WingetCreate before using -Submit. Details: " +
+            $_.Exception.Message)
     }
 }
 
@@ -178,6 +200,11 @@ function Get-InstallerSha256 {
         [object]$InstallerEntry
     )
 
+    if ($InstallerEntry.PSObject.Properties.Name -contains "LocalPath" -and
+        -not [string]::IsNullOrWhiteSpace([string]$InstallerEntry.LocalPath)) {
+        return (Get-FileHash -LiteralPath $InstallerEntry.LocalPath -Algorithm SHA256).Hash
+    }
+
     if ($InstallerEntry.Digest -match '^sha256:([a-fA-F0-9]{64})$') {
         return $Matches[1].ToUpperInvariant()
     }
@@ -200,10 +227,49 @@ function Get-InstallerSha256 {
     }
 }
 
+function Get-LocalInstallerEntries {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Directory,
+
+        [Parameter(Mandatory)]
+        [string]$DisplayVersion,
+
+        [Parameter(Mandatory)]
+        [string]$ReleaseTag
+    )
+
+    $resolvedDirectory = [IO.Path]::GetFullPath($Directory)
+    if (-not (Test-Path -LiteralPath $resolvedDirectory -PathType Container)) {
+        throw "Local artifact directory was not found: $resolvedDirectory"
+    }
+
+    $entries = foreach ($architecture in @("x64", "arm64")) {
+        $runtimeIdentifier = "win-$architecture"
+        $assetName = Get-ReleaseArtifactName `
+            -DisplayVersion $DisplayVersion `
+            -RuntimeIdentifier $runtimeIdentifier
+        $localPath = Join-Path $resolvedDirectory $assetName
+        if (-not (Test-Path -LiteralPath $localPath -PathType Leaf)) {
+            throw "Local release artifact was not found: $localPath"
+        }
+
+        [pscustomobject]@{
+            Architecture = $architecture
+            Name = $assetName
+            Url = "https://github.com/$Repository/releases/download/$ReleaseTag/$assetName"
+            Digest = ""
+            LocalPath = $localPath
+        }
+    }
+
+    return @($entries)
+}
+
 function Test-PackageExists {
     param([Parameter(Mandatory)][string]$Identifier)
 
-    & wingetcreate show $Identifier *> $null
+    & winget show --id $Identifier --exact --source winget --disable-interactivity *> $null
     return $LASTEXITCODE -eq 0
 }
 
@@ -238,51 +304,6 @@ function Resolve-PublishMode {
     return $RequestedMode
 }
 
-function Resolve-ManifestRoot {
-    param(
-        [Parameter(Mandatory)]
-        [string]$OutputDirectory,
-
-        [Parameter(Mandatory)]
-        [string]$Identifier,
-
-        [Parameter(Mandatory)]
-        [string]$PackageVersion
-    )
-
-    $identifierParts = $Identifier.Split('.')
-    if ($identifierParts.Length -lt 2) {
-        throw "Unexpected package identifier: $Identifier"
-    }
-
-    $publisher = $identifierParts[0]
-    $package = $identifierParts[1]
-    $expectedPath = Join-Path $OutputDirectory (
-        "manifests\{0}\{1}\{2}\{3}" -f
-        $publisher.Substring(0, 1).ToLowerInvariant(),
-        $publisher,
-        $package,
-        $PackageVersion)
-
-    if (Test-Path -LiteralPath $expectedPath -PathType Container) {
-        return $expectedPath
-    }
-
-    $fallback = Get-ChildItem `
-        -LiteralPath $OutputDirectory `
-        -Directory `
-        -Recurse `
-        -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -eq $PackageVersion } |
-        Select-Object -First 1
-
-    if ($null -eq $fallback) {
-        throw "Manifest directory was not found under '$OutputDirectory'."
-    }
-
-    return $fallback.FullName
-}
-
 function Write-Utf8File {
     param(
         [Parameter(Mandatory)]
@@ -299,7 +320,86 @@ function Write-Utf8File {
         $utf8WithoutBom)
 }
 
-function New-InitialManifests {
+function ConvertTo-YamlBlock {
+    param([Parameter(Mandatory)][string]$Value)
+
+    return (($Value.Trim() -split "`r?`n") |
+        ForEach-Object { "  $_" }) -join [Environment]::NewLine
+}
+
+function ConvertTo-YamlSingleQuoted {
+    param([Parameter(Mandatory)][string]$Value)
+
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
+function Get-WinGetLocaleMetadata {
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "WinGet locale metadata was not found: $Path"
+    }
+
+    $metadataObject = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 |
+        ConvertFrom-Json
+    $metadata = @{}
+    foreach ($localeProperty in $metadataObject.PSObject.Properties) {
+        $entry = @{}
+        foreach ($entryProperty in $localeProperty.Value.PSObject.Properties) {
+            $entry[$entryProperty.Name] = $entryProperty.Value
+        }
+        $metadata[$localeProperty.Name] = $entry
+    }
+    $expectedLocales = @(
+        "en-US", "ru-RU", "zh-CN", "zh-TW", "de-DE", "fr-FR",
+        "es-ES", "es-419", "pt-BR", "pt-PT", "ja-JP", "ko-KR",
+        "pl-PL", "tr-TR", "it-IT", "th-TH", "uk-UA", "cs-CZ",
+        "nl-NL", "sv-SE", "da-DK", "nb-NO", "fi-FI", "hu-HU",
+        "ro-RO", "el-GR", "bg-BG", "id-ID", "ms-MY", "vi-VN")
+
+    $actualLocales = @($metadata.Keys | Sort-Object)
+    $missingLocales = @($expectedLocales | Where-Object { $_ -notin $actualLocales })
+    $unexpectedLocales = @($actualLocales | Where-Object { $_ -notin $expectedLocales })
+    if ($missingLocales.Count -gt 0 -or $unexpectedLocales.Count -gt 0) {
+        throw @"
+WinGet locale metadata must contain exactly the 30 application locales.
+Missing   : $($missingLocales -join ', ')
+Unexpected: $($unexpectedLocales -join ', ')
+"@
+    }
+
+    foreach ($locale in $expectedLocales) {
+        $entry = $metadata[$locale]
+        foreach ($property in @(
+                "ShortDescription", "Description", "InstallationNotes", "ReleaseNotes")) {
+            if (-not $entry.ContainsKey($property) -or
+                [string]::IsNullOrWhiteSpace([string]$entry[$property])) {
+                throw "WinGet locale '$locale' has an empty $property value."
+            }
+        }
+        if (([string]$entry["ShortDescription"]).Length -gt 256) {
+            throw "WinGet locale '$locale' has a ShortDescription longer than 256 characters."
+        }
+
+        $tags = @($entry["Tags"])
+        if ($tags.Count -lt 1 -or $tags.Count -gt 16) {
+            throw "WinGet locale '$locale' must contain between 1 and 16 tags."
+        }
+        if (@($tags | Select-Object -Unique).Count -ne $tags.Count) {
+            throw "WinGet locale '$locale' contains duplicate tags."
+        }
+        foreach ($tag in $tags) {
+            if ([string]::IsNullOrWhiteSpace([string]$tag) -or
+                ([string]$tag).Length -gt 40) {
+                throw "WinGet locale '$locale' contains an invalid tag: '$tag'."
+            }
+        }
+    }
+
+    return $metadata
+}
+
+function Write-LocalizedManifests {
     param(
         [Parameter(Mandatory)]
         [string]$ManifestRoot,
@@ -314,10 +414,88 @@ function New-InitialManifests {
         [string]$ReleaseTag,
 
         [Parameter(Mandatory)]
-        [string]$ReleaseDate,
+        [string]$Name,
 
         [Parameter(Mandatory)]
-        [string]$Name,
+        [Collections.IDictionary]$Metadata
+    )
+
+    foreach ($locale in $Metadata.Keys) {
+        $entry = $Metadata[$locale]
+        # The WinGet 1.12 locale schema rejects numeric UN M49 regions such as
+        # es-419, so the Latin American Spanish metadata uses es-MX there only.
+        $packageLocale = if ($locale -eq "es-419") { "es-MX" } else { $locale }
+        $shortDescription = ConvertTo-YamlBlock -Value $entry.ShortDescription
+        $description = ConvertTo-YamlBlock -Value $entry.Description
+        $installationNotes = ConvertTo-YamlBlock -Value $entry.InstallationNotes
+        $releaseNotes = ConvertTo-YamlBlock -Value $entry.ReleaseNotes
+        $tagLines = @($entry.Tags | ForEach-Object {
+                "- " + (ConvertTo-YamlSingleQuoted -Value ([string]$_))
+            }) -join [Environment]::NewLine
+
+        $defaultFields = if ($locale -eq "en-US") {
+@"
+PublisherUrl: https://github.com/Avazbek22
+PublisherSupportUrl: https://github.com/$Repository/issues
+PackageUrl: https://github.com/$Repository
+LicenseUrl: https://github.com/$Repository/blob/master/LICENSE
+Copyright: Copyright (c) 2026 Avazbek Olimov
+Moniker: $commandAlias
+Documentations:
+- DocumentLabel: Project documentation
+  DocumentUrl: https://github.com/$Repository#readme
+"@
+        }
+        else {
+            ""
+        }
+        $manifestType = if ($locale -eq "en-US") { "defaultLocale" } else { "locale" }
+        $schemaType = if ($locale -eq "en-US") { "defaultLocale" } else { "locale" }
+
+        $manifest = @"
+# yaml-language-server: `$schema=https://aka.ms/winget-manifest.$schemaType.$manifestSchemaVersion.schema.json
+
+PackageIdentifier: $Identifier
+PackageVersion: $PackageVersion
+PackageLocale: $packageLocale
+Publisher: Olimoff Dev
+PackageName: $Name
+License: MIT
+$defaultFields
+ShortDescription: >-
+$shortDescription
+Description: >-
+$description
+InstallationNotes: >-
+$installationNotes
+ReleaseNotes: >-
+$releaseNotes
+ReleaseNotesUrl: https://github.com/$Repository/releases/tag/$ReleaseTag
+Tags:
+$tagLines
+ManifestType: $manifestType
+ManifestVersion: $manifestSchemaVersion
+"@
+
+        Write-Utf8File `
+            -Path (Join-Path $ManifestRoot "$Identifier.locale.$packageLocale.yaml") `
+            -Content $manifest
+    }
+}
+
+function New-InitialManifests {
+    param(
+        [Parameter(Mandatory)]
+        [string]$ManifestRoot,
+
+        [Parameter(Mandatory)]
+        [string]$Identifier,
+
+        [Parameter(Mandatory)]
+        [string]$PackageVersion,
+
+        [Parameter(Mandatory)]
+        [string]$ReleaseDate,
 
         [Parameter(Mandatory)]
         [object[]]$InstallerEntries
@@ -360,99 +538,12 @@ ManifestType: installer
 ManifestVersion: $manifestSchemaVersion
 "@
 
-    $localeManifest = @"
-# yaml-language-server: `$schema=https://aka.ms/winget-manifest.defaultLocale.$manifestSchemaVersion.schema.json
-
-PackageIdentifier: $Identifier
-PackageVersion: $PackageVersion
-PackageLocale: en-US
-Publisher: Olimoff Dev
-PublisherUrl: https://github.com/Avazbek22
-PublisherSupportUrl: https://github.com/$Repository/issues
-PackageName: $Name
-PackageUrl: https://github.com/$Repository
-License: MIT
-LicenseUrl: https://github.com/$Repository/blob/master/LICENSE
-Copyright: Copyright (c) 2026 Avazbek Olimov
-ShortDescription: Resets or disables Windows Bluetooth Hands-Free services when a headset is stuck in low-quality call mode.
-Description: >-
-  A Windows utility for Bluetooth headsets that remain in low-quality Hands-Free
-  call mode after a game or voice application stops using the microphone. Soft
-  reset tries to restore normal stereo audio by restarting active Hands-Free
-  services without disabling the headset microphone or changing service startup
-  settings. If low-quality audio keeps returning, Hard mode backs up and disables
-  these services for stable stereo playback, which also disables the headset
-  microphone. Restore returns the saved Windows service settings.
-InstallationNotes: >-
-  Hard mode changes Windows Bluetooth Hands-Free services. Run Restore before
-  uninstalling if you want to re-enable HFP and the Bluetooth headset
-  microphone.
-Moniker: $commandAlias
-Tags:
-- audio
-- bluetooth
-- gaming
-- hands-free
-- headphones
-- headset
-- hfp
-- windows
-ReleaseNotesUrl: https://github.com/$Repository/releases/tag/$ReleaseTag
-Documentations:
-- DocumentLabel: Project documentation
-  DocumentUrl: https://github.com/$Repository#readme
-ManifestType: defaultLocale
-ManifestVersion: $manifestSchemaVersion
-"@
-
     Write-Utf8File `
         -Path (Join-Path $ManifestRoot "$Identifier.yaml") `
         -Content $versionManifest
     Write-Utf8File `
         -Path (Join-Path $ManifestRoot "$Identifier.installer.yaml") `
         -Content $installerManifest
-    Write-Utf8File `
-        -Path (Join-Path $ManifestRoot "$Identifier.locale.en-US.yaml") `
-        -Content $localeManifest
-}
-
-function Update-ExistingManifests {
-    param(
-        [Parameter(Mandatory)]
-        [string]$OutputDirectory,
-
-        [Parameter(Mandatory)]
-        [string]$Identifier,
-
-        [Parameter(Mandatory)]
-        [string]$PackageVersion,
-
-        [Parameter(Mandatory)]
-        [string]$ReleaseTag,
-
-        [Parameter(Mandatory)]
-        [string]$ReleaseDate,
-
-        [Parameter(Mandatory)]
-        [object[]]$InstallerEntries
-    )
-
-    $urlArguments = @(
-        $InstallerEntries |
-        ForEach-Object { "$($_.Url)|$($_.Architecture)" }
-    )
-
-    $arguments = @("update", "--urls") +
-        $urlArguments +
-        @(
-            "--version", $PackageVersion,
-            "--release-notes-url", "https://github.com/$Repository/releases/tag/$ReleaseTag",
-            "--release-date", $ReleaseDate,
-            "--out", $OutputDirectory,
-            $Identifier
-        )
-
-    Invoke-NativeCommand -FilePath "wingetcreate" -Arguments $arguments | Out-Null
 }
 
 function Invoke-ManifestValidation {
@@ -574,9 +665,17 @@ function Submit-Manifests {
 if ($Submit -and $LocalOnly) {
     throw "Use either -Submit or -LocalOnly, not both."
 }
+if ($Submit -and -not [string]::IsNullOrWhiteSpace($LocalArtifactsDirectory)) {
+    throw "Submission requires an already published GitHub release. Remove -LocalArtifactsDirectory."
+}
+if ($InstallTest -and -not [string]::IsNullOrWhiteSpace($LocalArtifactsDirectory)) {
+    throw "The WinGet install test requires public installer URLs. Run it after publishing the GitHub release."
+}
 
 Ensure-Command -Name "winget"
-Ensure-Command -Name "wingetcreate"
+if ($Submit) {
+    Ensure-WingetCreate
+}
 
 $projectReleaseInfo = Get-ProjectReleaseInfo -ProjectPath $projectPath
 $displayVersion = if ([string]::IsNullOrWhiteSpace($Version)) {
@@ -595,13 +694,43 @@ else {
 
 $packageVersion = ConvertTo-NormalizedVersion -Version $displayVersion
 $releaseTag = "v$displayVersion"
-$release = Get-GitHubRelease -RepositoryName $Repository -ReleaseTag $releaseTag
-$installerEntries = Get-ReleaseInstallerEntries `
-    -Release $release `
-    -DisplayVersion $displayVersion
-$releaseDate = ([DateTimeOffset]$release.published_at).UtcDateTime.ToString(
-    "yyyy-MM-dd",
-    [Globalization.CultureInfo]::InvariantCulture)
+$usesLocalArtifacts = -not [string]::IsNullOrWhiteSpace($LocalArtifactsDirectory)
+if ($usesLocalArtifacts) {
+    $installerEntries = Get-LocalInstallerEntries `
+        -Directory $LocalArtifactsDirectory `
+        -DisplayVersion $displayVersion `
+        -ReleaseTag $releaseTag
+    $releaseDate = if ([string]::IsNullOrWhiteSpace($PlannedReleaseDate)) {
+        [DateTime]::UtcNow.ToString(
+            "yyyy-MM-dd",
+            [Globalization.CultureInfo]::InvariantCulture)
+    }
+    else {
+        $parsedReleaseDate = [DateTime]::MinValue
+        if (-not [DateTime]::TryParseExact(
+                $PlannedReleaseDate,
+                "yyyy-MM-dd",
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::None,
+                [ref]$parsedReleaseDate)) {
+            throw "Planned release date must use yyyy-MM-dd format."
+        }
+        $parsedReleaseDate.ToString(
+            "yyyy-MM-dd",
+            [Globalization.CultureInfo]::InvariantCulture)
+    }
+}
+else {
+    $release = Get-GitHubRelease -RepositoryName $Repository -ReleaseTag $releaseTag
+    $installerEntries = Get-ReleaseInstallerEntries `
+        -Release $release `
+        -DisplayVersion $displayVersion
+    $releaseDate = ([DateTimeOffset]$release.published_at).UtcDateTime.ToString(
+        "yyyy-MM-dd",
+        [Globalization.CultureInfo]::InvariantCulture)
+}
+$localeMetadataPath = Join-Path $PSScriptRoot "winget-locales.json"
+$localeMetadata = Get-WinGetLocaleMetadata -Path $localeMetadataPath
 $packageExists = Test-PackageExists -Identifier $PackageIdentifier
 $publishMode = Resolve-PublishMode `
     -RequestedMode $Mode `
@@ -622,6 +751,8 @@ Write-Host "Display version   : $displayVersion"
 Write-Host "Package version   : $packageVersion"
 Write-Host "Release tag       : $releaseTag"
 Write-Host "Release date      : $releaseDate"
+Write-Host "Localized metadata: $($localeMetadata.Count) locales"
+Write-Host "Installer source  : $(if ($usesLocalArtifacts) { 'local release artifacts' } else { 'public GitHub release' })"
 Write-Host "Output directory  : $resolvedOutputDirectory"
 foreach ($installerEntry in $installerEntries) {
     Write-Host (
@@ -639,45 +770,34 @@ if (Test-Path -LiteralPath $resolvedOutputDirectory) {
 }
 New-Item -ItemType Directory -Path $resolvedOutputDirectory -Force | Out-Null
 
-if ($publishMode -eq "New") {
-    $identifierParts = $PackageIdentifier.Split('.')
-    $manifestRoot = Join-Path $resolvedOutputDirectory (
-        "manifests\{0}\{1}\{2}\{3}" -f
-        $identifierParts[0].Substring(0, 1).ToLowerInvariant(),
-        $identifierParts[0],
-        $identifierParts[1],
-        $packageVersion)
+$identifierParts = $PackageIdentifier.Split('.')
+$manifestRoot = Join-Path $resolvedOutputDirectory (
+    "manifests\{0}\{1}\{2}\{3}" -f
+    $identifierParts[0].Substring(0, 1).ToLowerInvariant(),
+    $identifierParts[0],
+    $identifierParts[1],
+    $packageVersion)
 
-    Write-Step -Message "Generating initial manifests"
-    New-InitialManifests `
-        -ManifestRoot $manifestRoot `
-        -Identifier $PackageIdentifier `
-        -PackageVersion $packageVersion `
-        -ReleaseTag $releaseTag `
-        -ReleaseDate $releaseDate `
-        -Name $packageName `
-        -InstallerEntries $installerEntries
-}
-else {
-    Write-Step -Message "Generating updated manifests"
-    Update-ExistingManifests `
-        -OutputDirectory $resolvedOutputDirectory `
-        -Identifier $PackageIdentifier `
-        -PackageVersion $packageVersion `
-        -ReleaseTag $releaseTag `
-        -ReleaseDate $releaseDate `
-        -InstallerEntries $installerEntries
-    $manifestRoot = Resolve-ManifestRoot `
-        -OutputDirectory $resolvedOutputDirectory `
-        -Identifier $PackageIdentifier `
-        -PackageVersion $packageVersion
-}
+Write-Step -Message "Generating $publishMode manifests"
+New-InitialManifests `
+    -ManifestRoot $manifestRoot `
+    -Identifier $PackageIdentifier `
+    -PackageVersion $packageVersion `
+    -ReleaseDate $releaseDate `
+    -InstallerEntries $installerEntries
+Write-LocalizedManifests `
+    -ManifestRoot $manifestRoot `
+    -Identifier $PackageIdentifier `
+    -PackageVersion $packageVersion `
+    -ReleaseTag $releaseTag `
+    -Name $packageName `
+    -Metadata $localeMetadata
 
 Write-Step -Message "Validating manifests"
 Invoke-ManifestValidation -ManifestRoot $manifestRoot
 
 $shouldRunInstallTest = $InstallTest
-if (-not $NonInteractive -and -not $InstallTest) {
+if (-not $NonInteractive -and -not $InstallTest -and -not $usesLocalArtifacts) {
     $installTestAnswer = Read-Optional `
         -Prompt "Run local install and uninstall test? y/N" `
         -DefaultValue "N"
@@ -694,12 +814,6 @@ if ($shouldRunInstallTest) {
 }
 
 $shouldSubmit = $Submit
-if (-not $NonInteractive -and -not $Submit -and -not $LocalOnly) {
-    $submitAnswer = Read-Optional `
-        -Prompt "Submit PR to microsoft/winget-pkgs now? Y/n" `
-        -DefaultValue "Y"
-    $shouldSubmit = $submitAnswer -notmatch '^(n|no|н|нет)$'
-}
 
 if (-not $shouldSubmit) {
     Write-Step -Message "Completed locally"

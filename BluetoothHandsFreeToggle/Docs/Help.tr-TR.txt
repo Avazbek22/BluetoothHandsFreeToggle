@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle, Windows bir Bluetooth Klasik kulaklığı düşük kaliteli HFP çağrı modunda bıraktığında normal stereo oynatımı geri yükler.
+
+Modlar:
+ - Durum al: desteklenen HFP servislerini ve yedek durumunu okur. Hiçbir değişiklik yapılmaz.
+ - Yumuşak sıfırlama: başlangıç türünü değiştirmeden yalnızca aktif HFP servislerini yeniden başlatır.
+   Bir uygulama mikrofonu kullanmayı bıraktıktan sonra çağrı modu aktif kaldığında kullanın.
+ - Zorunlu mod: yüksek kaliteli A2DP oynatımını zorlamak için HFP'yi sistem genelinde durdurur ve devre dışı bırakır.
+   Zorunlu mod aktifken Bluetooth kulaklık mikrofonu kullanılamaz durumda kalır.
+ - Geri Yükle: Zorunlu mod tarafından kaydedilen başlatma ve Çalışıyor/Durduruldu durumunu tam olarak geri getirir.
+   Yedek yoksa, Manuel + Çalışıyor kurtarma varsayılanlarını kullanır.
+ - Dili değiştir: Tam dil listesini açar ve seçiminizi hatırlar.
+   İlk çalıştırmada, arayüz dili Windows tercihlerinize göre tespit edilir.
+
+Önemli sınırlama:
+ - Bluetooth Klasik, HFP mikrofonu aktif olarak kullanılırken A2DP kalitesinde oynatım sağlayamaz.
+   Yumuşak sıfırlama, takılmış bir oturumu temizleyebilir, ancak bu protokol sınırlamasını kaldıramaz.
+
+Güvenlik:
+ - Durum için Yönetici gerekmez.
+ - Hizmetleri değiştirmek için Yönetici gereklidir.
+ - Zorunlu mod, servis yapılandırmasını değiştirmeden önce bir yedek oluşturur.
+ - Zorunlu mod'in tekrar edilen çalıştırmaları, ilk orijinal durum yedeğini korur.
+ - Kurtarma sırasında herhangi bir bölüm başarısız olursa, Geri Yükleme yedeği tutar.
+ - Zorunlu mod, bu Windows kurulumundaki tüm Bluetooth Classic kulaklıkları etkiler.
+
+Sorun Giderme:
+ - Yumuşak sıfırlamadan önce oyunları, tarayıcıları, sesli sohbet ve kayıt uygulamalarını kapatın.
+ - Eğer Yumuşak sıfırlama stereo kalitesini geri getirmezse, Zorunlu mod'i kullanın.
+ - Eğer Zorunlu mod kulaklık mikrofonunu devre dışı bıraktıysa, önceki duruma dönmek için Geri Yükle'yi kullanın.
+ - Bir uygulama önceki ses yolunu önbelleğe aldıysa, bir işlemden sonra kulaklığı yeniden bağlayın veya ses çalmayı yeniden başlatın.
+
+Proje:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

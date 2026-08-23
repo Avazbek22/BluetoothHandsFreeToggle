@@ -1,5 +1,4 @@
-BluetoothHandsFreeToggle restores normal stereo playback when Windows leaves a
-Bluetooth Classic headset in low-quality HFP call mode.
+BluetoothHandsFreeToggle restores normal stereo playback when Windows leaves a Bluetooth Classic headset in low-quality HFP call mode.
 
 Modes:
  - Get status: reads the supported HFP services and backup state. No changes are made.
@@ -9,12 +8,12 @@ Modes:
    The Bluetooth headset microphone remains unavailable while Hard mode is active.
  - Restore: exactly returns the startup and Running/Stopped state saved by Hard mode.
    If no backup exists, it uses Manual + Running recovery defaults.
- - Change language: switches between English and Russian and remembers the choice.
+ - Change language: opens the full language list and remembers your choice.
+   On the first run, the interface language is detected from your Windows preferences.
 
 Important limitation:
- - Bluetooth Classic cannot provide A2DP-quality playback while its HFP microphone
-   is actively in use. Soft reset can clear a stuck session, but it cannot remove
-   this protocol limitation.
+ - Bluetooth Classic cannot provide A2DP-quality playback while its HFP microphone is actively in use.
+   Soft reset can clear a stuck session, but it cannot remove this protocol limitation.
 
 Safety:
  - Status does not require Administrator.
@@ -28,8 +27,7 @@ Troubleshooting:
  - Close games, browsers, voice chat and recording apps before Soft reset.
  - If Soft reset does not restore stereo quality, use Hard mode.
  - If Hard mode disabled the headset microphone, use Restore to return the previous state.
- - Reconnect the headset or restart audio playback after an operation if an app
-   cached the previous audio route.
+ - Reconnect the headset or restart audio playback after an operation if an app cached the previous audio route.
 
 Project:
  - https://github.com/Avazbek22/BluetoothHandsFreeToggle

@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle este o utilitate Windows pentru recuperarea redării de înaltă calitate a căștilor Bluetooth Classic.
+
+Caracteristici:
+ - Resetare soft sigură care menține microfonul HFP disponibil
+ - Mod forțat care prioritizează calitatea redării
+ - Restaurarea stării originale a serviciului bazată pe backup
+ - Interfață localizată în 30 de limbi utilizate pe scară largă
+ - Meniu interactiv de consolă concentrat
+
+Utilitarul gestionează o listă conservatoare de servicii Windows HFP. Nu dezinstalează driverele, nu elimină împerecherile Bluetooth și nu schimbă firmware-ul căștilor.
+
+Autor:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Licență:
+ - MIT

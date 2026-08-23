@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle herstelt normale stereoweergave wanneer Windows een Bluetooth Classic-headset in de lage-kwaliteit HFP-gespreksmodus laat staan.
+
+Modi:
+ - Status opvragen: leest de ondersteunde HFP-diensten en de back-upstatus. Er worden geen wijzigingen aangebracht.
+ - Zachte reset: herstart alleen actieve HFP-diensten zonder hun opstarttype te wijzigen.
+   Gebruik dit wanneer de gespreksmodus actief blijft nadat een app is gestopt met het gebruik van de microfoon.
+ - Harde modus: stopt en schakelt HFP systeemwijd uit om hoogwaardige A2DP-weergave af te dwingen.
+   De microfoon van de Bluetooth-headset blijft onbeschikbaar terwijl Harde modus actief is.
+ - Herstellen: keert exact terug naar de opstart- en Uitgevoerd/Gestopt-status die door Harde modus is opgeslagen.
+   Als er geen back-up bestaat, worden de herstelstandaarden Handmatig + Actief gebruikt.
+ - Taal wijzigen: opent de volledige taalkeuzelijst en onthoudt uw keuze.
+   Bij de eerste uitvoering wordt de interface taal gedetecteerd op basis van uw Windows-voorkeuren.
+
+Belangrijke beperking:
+ - Bluetooth Classic kan geen A2DP-kwaliteit afspelen terwijl de HFP-microfoon actief wordt gebruikt.
+   Een zachte reset kan een vastgelopen sessie wissen, maar kan deze protocolbeperking niet verwijderen.
+
+Veiligheid:
+ - Status vereist geen Administrator.
+ - Het wijzigen van services vereist Administrator.
+ - Harde modus maakt een back-up voordat de serviceconfiguratie wordt gewijzigd.
+ - Herhaalde Harde modus-uitvoeringen behouden de eerste back-up van de oorspronkelijke status.
+ - Herstellen behoudt de back-up als een onderdeel van het herstel mislukt.
+ - Harde modus beïnvloedt alle Bluetooth Classic-headsets op deze Windows-installatie.
+
+Problemen oplossen:
+ - Sluit games, browsers, spraakchat- en opname-apps voordat u een zachte reset uitvoert.
+ - Als een zachte reset de stereokwaliteit niet herstelt, gebruik Harde modus.
+ - Als Harde modus het headsetmicrofoon heeft uitgeschakeld, gebruik Herstellen om de vorige staat te herstellen.
+ - Maak de headset opnieuw verbinding of herstart de audioweergave na een bewerking als een app de vorige audioroute heeft gecachet.
+
+Project:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

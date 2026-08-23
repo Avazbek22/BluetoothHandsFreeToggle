@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle är ett Windows-verktyg för att återställa högkvalitativ uppspelning med Bluetooth Classic-headset.
+
+Funktioner:
+ - Säker mjuk återställning som håller HFP-mikrofonen tillgänglig
+ - Hårt läge som prioriterar uppspelningskvalitet
+ - Återställning baserad på backup av det ursprungliga tjänstläget
+ - Gränssnitt lokaliserat till 30 allmänt använda språk
+ - Fokuserad interaktiv konsolmeny
+
+Verktyget hanterar en konservativ lista över Windows HFP-tjänster. Det avinstallerar inte drivrutiner, tar inte bort Bluetooth-parningar eller ändrar headsetets firmware.
+
+Författare:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+Licens:
+ - MIT

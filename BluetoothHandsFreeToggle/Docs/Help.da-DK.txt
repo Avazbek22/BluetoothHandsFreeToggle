@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle gendanner normal stereounderspil, når Windows efterlader et klassisk Bluetooth-headset i lavkvalitets HFP-opkaldstilstand.
+
+Tilstande:
+ - Hent status: læser de understøttede HFP-tjenester og backup-tilstand. Der foretages ingen ændringer.
+ - Blød nulstilling: genstarter kun aktive HFP-tjenester uden at ændre deres opstartstype.
+   Brug det, når opkaldstilstand forblev aktiv, efter en app stoppede med at bruge mikrofonen.
+ - Hård tilstand: stopper og deaktiverer HFP systemomfattende for at tvinge afspilning af høj kvalitets A2DP.
+   Bluetooth-headsettets mikrofon forbliver utilgængelig, mens Hård tilstand er aktiv.
+ - Gendan: returnerer præcist opstarts- og Kørende/Stoppe-tilstanden, som blev gemt af Hård tilstand.
+   Hvis der ikke findes en sikkerhedskopi, bruger den Manual + Kørende gendannelsesstandarder.
+ - Skift sprog: åbner den fulde sprog-liste og husker dit valg.
+   Ved første kørsel registreres grænsefladesproget ud fra dine Windows-præferencer.
+
+Vigtig begrænsning:
+ - Bluetooth Classic kan ikke levere A2DP-kvalitet afspilning, mens dens HFP-mikrofon er aktivt i brug.
+   En blød nulstilling kan rydde en fastlåst session, men den kan ikke fjerne denne protokolbegrænsning.
+
+Sikkerhed:
+ - Status kræver ikke Administrator.
+ - Ændring af tjenester kræver Administrator.
+ - Hård tilstand opretter en sikkerhedskopi, før servicekonfigurationen ændres.
+ - Gentagne Hård tilstand-kørsler bevarer den første sikkerhedskopi af oprindelig tilstand.
+ - Gendannelse beholder backupen, hvis nogen del af gendannelsen fejler.
+ - Hård tilstand påvirker alle Bluetooth Classic-headset på denne Windows-installation.
+
+Fejlfinding:
+ - Luk spil, browsere, stemmechat og optageapps, før Blød nulstilling.
+ - Hvis softreset ikke gendanner stereokvaliteten, skal du bruge Hård tilstand.
+ - Hvis Hård tilstand deaktiverede headset-mikrofonen, skal du bruge Gendan for at vende tilbage til den tidligere tilstand.
+ - Genforbind headsettet eller genstart lydafspilning efter en handling, hvis en app har cachet den tidligere lydrute.
+
+Projekt:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

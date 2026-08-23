@@ -11,12 +11,16 @@
 
         <AssemblyName>BluetoothHandsFreeToggle</AssemblyName>
         <RootNamespace>BluetoothHandsFreeToggle</RootNamespace>
-        <Version>2.1.0</Version>
-        <AssemblyVersion>2.1.0.0</AssemblyVersion>
-        <FileVersion>2.1.0.0</FileVersion>
-        <InformationalVersion>2.1</InformationalVersion>
+        <Product>BluetoothHandsFreeToggle</Product>
+        <Authors>Avazbek22</Authors>
+        <Company>Olimoff Dev</Company>
+        <Copyright>Copyright © 2026 Avazbek Olimov</Copyright>
+        <Version>2.2.0</Version>
+        <AssemblyVersion>2.2.0.0</AssemblyVersion>
+        <FileVersion>2.2.0.0</FileVersion>
+        <InformationalVersion>2.2</InformationalVersion>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-        <Description>Soft reset and hard disable/restore modes for Windows Bluetooth Hands-Free services.</Description>
+        <Description>Fixes low-quality Windows Bluetooth headset audio with safe HFP reset, disable, and restore modes.</Description>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
 

@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle khôi phục phát âm thanh stereo bình thường khi Windows để một tai nghe Bluetooth Classic ở chế độ cuộc gọi HFP chất lượng thấp.
+
+Các chế độ:
+ - Xem trạng thái: đọc các dịch vụ HFP được hỗ trợ và trạng thái sao lưu. Không có thay đổi nào được thực hiện.
+ - Khởi động lại mềm: chỉ khởi động lại các dịch vụ HFP đang hoạt động mà không thay đổi loại khởi động của chúng.
+   Sử dụng khi chế độ cuộc gọi vẫn hoạt động sau khi một ứng dụng ngừng sử dụng micro.
+ - Chế độ cưỡng bức: dừng và vô hiệu hóa HFP trên toàn hệ thống để buộc phát lại A2DP chất lượng cao.
+   Micro của tai nghe Bluetooth vẫn không khả dụng khi Chế độ cưỡng bức đang hoạt động.
+ - Khôi phục: trả lại chính xác trạng thái khởi động và Đang chạy/Đã dừng đã được lưu bởi Chế độ cưỡng bức.
+   Nếu không có bản sao lưu, nó sẽ sử dụng các mặc định khôi phục Thủ công + Đang chạy.
+ - Thay đổi ngôn ngữ: mở danh sách đầy đủ các ngôn ngữ và ghi nhớ lựa chọn của bạn.
+   Trong lần chạy đầu tiên, ngôn ngữ giao diện được phát hiện từ tùy chọn Windows của bạn.
+
+Hạn chế quan trọng:
+ - Bluetooth Classic không thể cung cấp phát lại chất lượng A2DP khi micro HFP đang được sử dụng.
+   Đặt lại mềm có thể xóa phiên bị kẹt, nhưng nó không thể loại bỏ hạn chế giao thức này.
+
+An toàn:
+ - Trạng thái không yêu cầu quyền Quản trị.
+ - Thay đổi dịch vụ yêu cầu quyền Quản trị.
+ - Chế độ cưỡng bức tạo một bản sao lưu trước khi thay đổi cấu hình dịch vụ.
+ - Các lần chạy Chế độ cưỡng bức lặp lại sẽ giữ bản sao lưu trạng thái gốc đầu tiên.
+ - Khôi phục giữ bản sao lưu nếu bất kỳ phần nào của quá trình phục hồi thất bại.
+ - Chế độ cưỡng bức ảnh hưởng đến tất cả tai nghe Bluetooth Classic trên cài đặt Windows này.
+
+Khắc phục sự cố:
+ - Đóng các trò chơi, trình duyệt, ứng dụng chat thoại và ghi âm trước khi Tái đặt mềm.
+ - Nếu khởi động lại mềm không khôi phục chất lượng âm thanh nổi, hãy sử dụng Chế độ cưỡng bức.
+ - Nếu Chế độ cưỡng bức tắt micro của tai nghe, hãy sử dụng Khôi phục để trở về trạng thái trước đó.
+ - Kết nối lại tai nghe hoặc khởi động lại phát âm thanh sau một thao tác nếu ứng dụng đã lưu đường dẫn âm thanh trước đó.
+
+Dự án:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

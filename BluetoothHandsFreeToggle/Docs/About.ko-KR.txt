@@ -1,0 +1,19 @@
+BluetoothHandsFreeToggle은 고품질 블루투스 클래식 헤드셋 재생을 복구하기 위한 Windows 유틸리티입니다.
+
+특징:
+ - HFP 마이크를 사용할 수 있는 안전한 소프트 리셋
+ - 재생 품질을 우선시하는 하드 모드
+ - 원래 서비스 상태를 백업 기반으로 복원
+ - 30개의 널리 사용되는 언어로 현지화된 인터페이스
+ - 집중된 인터랙티브 콘솔 메뉴
+
+이 유틸리티는 보수적인 목록의 Windows HFP 서비스를 관리합니다. 드라이버를 제거하거나, 블루투스 페어링을 삭제하거나, 헤드셋 펌웨어를 변경하지 않습니다.
+
+작성자:
+ - Avazbek22
+
+GitHub:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle
+
+라이선스:
+ - MIT

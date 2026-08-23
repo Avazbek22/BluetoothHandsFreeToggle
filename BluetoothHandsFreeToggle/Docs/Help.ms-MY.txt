@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle memulihkan main balik stereo biasa apabila Windows meninggalkan fon kepala Bluetooth Classic dalam mod panggilan HFP berkualiti rendah.
+
+Mod:
+ - Dapatkan status: membaca perkhidmatan HFP yang disokong dan keadaan sandaran. Tiada perubahan dilakukan.
+ - Set semula lembut: memulakan semula hanya perkhidmatan HFP yang aktif tanpa mengubah jenis permulaan mereka.
+   Gunakan apabila mod panggilan tetap aktif selepas aplikasi berhenti menggunakan mikrofon.
+ - Mod paksa: menghentikan dan menyahaktifkan sistem HFP secara menyeluruh untuk memaksa main semula A2DP berkualiti tinggi.
+   Mikrofon fon kepala Bluetooth tetap tidak tersedia semasa Mod paksa aktif.
+ - Pulihkan: mengembalikan tepat keadaan permulaan dan Berjalan/Berhenti yang disimpan oleh Mod paksa.
+   Jika tiada sandaran wujud, ia menggunakan tetapan pemulihan Manual + Running secara lalai.
+ - Tukar bahasa: membuka senarai bahasa penuh dan mengingati pilihan anda.
+   Pada jalankan pertama, bahasa antaramuka dikesan daripada keutamaan Windows anda.
+
+Had penting:
+ - Bluetooth Classic tidak dapat menyediakan main semula berkualiti A2DP semasa mikrofon HFP sedang digunakan secara aktif.
+   Penetapan semula lembut boleh membersihkan sesi yang tersangkut, tetapi ia tidak dapat menghapuskan had protokol ini.
+
+Keselamatan:
+ - Status tidak memerlukan Pentadbir.
+ - Menukar perkhidmatan memerlukan Pentadbir.
+ - Mod paksa membuat sandaran sebelum menukar konfigurasi perkhidmatan.
+ - Jalankan Mod paksa berulang kali mengekalkan sandaran keadaan asal pertama.
+ - Pemulihan mengekalkan sandaran jika mana-mana bahagian pemulihan gagal.
+ - Mod paksa menjejaskan semua set kepala Bluetooth Klasik pada pemasangan Windows ini.
+
+Penyelesaian masalah:
+ - Tutup permainan, pelayar, sembang suara dan aplikasi rakaman sebelum Tetapan Semula Lembut.
+ - Jika tetapan semula lembut tidak memulihkan kualiti stereo, gunakan Mod paksa.
+ - Jika Mod paksa melumpuhkan mikrofon set kepala, gunakan Pulihkan untuk mengembalikan keadaan sebelumnya.
+ - Sambungkan semula fon kepala atau mulakan semula main balik audio selepas satu operasi jika aplikasi menyimpan laluan audio sebelumnya.
+
+Projek:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

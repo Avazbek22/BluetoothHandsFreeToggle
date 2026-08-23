@@ -50,7 +50,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
                     ShowDocumentation(Text.Get("screen.about"), DocumentationDocument.About);
                     break;
                 case "7":
-                    Text.ToggleLanguage();
+                    ShowLanguageSelection();
                     break;
                 case "8":
                     OpenSupportPage();
@@ -117,6 +117,70 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
         Console.WriteLine();
     }
 
+    private void ShowLanguageSelection()
+    {
+        ConsoleHelpers.TryClearScreen();
+        RenderHeader();
+
+        ConsoleHelpers.WithColor(
+            ConsoleColor.White,
+            () => Console.WriteLine(Text.Get("language.title")));
+        Console.WriteLine(Text.Format(
+            "language.current",
+            Text.CurrentLanguageDefinition.NativeName));
+        Console.WriteLine();
+
+        var languages = AppLanguageCatalog.All;
+        var rowCount = (languages.Count + 1) / 2;
+        var items = languages
+            .Select((definition, index) => GetLanguageMenuItem(index, definition))
+            .ToArray();
+        var leftColumnWidth = items
+            .Take(rowCount)
+            .Max(ConsoleText.GetDisplayWidth);
+        for (var row = 0; row < rowCount; row++)
+        {
+            var left = ConsoleText.PadRight(items[row], leftColumnWidth);
+            var rightIndex = row + rowCount;
+            var right = rightIndex < items.Length ? $"  {items[rightIndex]}" : string.Empty;
+            Console.WriteLine(left + right);
+        }
+
+        Console.WriteLine($"[0] {Text.Get("language.back")}");
+        Console.WriteLine();
+        Console.Write(Text.Get("language.select"));
+
+        var input = Console.ReadLine()?.Trim();
+        if (input is null or "0")
+            return;
+
+        if (!int.TryParse(input, out var selectedIndex) ||
+            selectedIndex < 1 ||
+            selectedIndex > languages.Count)
+        {
+            ConsoleHelpers.WriteWarning(Text.Get("common.invalidChoice"));
+            ConsoleHelpers.Pause();
+            return;
+        }
+
+        var selected = languages[selectedIndex - 1];
+        Text.SetLanguage(selected.Language);
+        ConsoleHelpers.WriteSuccess(Text.Format(
+            "language.changed",
+            selected.NativeName));
+        ConsoleHelpers.Pause();
+    }
+
+    private static string GetLanguageMenuItem(
+        int index,
+        AppLanguageDefinition definition)
+    {
+        var currentMarker = definition.Language == Text.CurrentLanguage
+            ? $" ({Text.Get("language.currentMarker")})"
+            : string.Empty;
+        return $"[{index + 1,2}] {definition.NativeName}{currentMarker}";
+    }
+
     private void ShowStatus()
     {
         ConsoleHelpers.TryClearScreen();
@@ -159,7 +223,8 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
 
         var answer = Console.ReadLine()?.Trim();
         return answer is not null &&
-               (answer.Equals("y", StringComparison.OrdinalIgnoreCase) ||
+               (answer.Equals("1", StringComparison.Ordinal) ||
+                answer.Equals("y", StringComparison.OrdinalIgnoreCase) ||
                 answer.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                 answer.Equals("д", StringComparison.OrdinalIgnoreCase) ||
                 answer.Equals("да", StringComparison.OrdinalIgnoreCase));
@@ -175,7 +240,9 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
         else
             ConsoleHelpers.WriteError(report.Title);
 
-        Console.WriteLine(new string('-', Math.Max(10, report.Title.Length)));
+        Console.WriteLine(new string(
+            '-',
+            Math.Max(10, ConsoleText.GetDisplayWidth(report.Title))));
         WriteReportLines(report);
 
         if (report.Snapshots.Count > 0)

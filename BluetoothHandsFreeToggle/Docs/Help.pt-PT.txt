@@ -1,0 +1,33 @@
+BluetoothHandsFreeToggle restaura a reprodução estéreo normal quando o Windows deixa um headset Bluetooth Classic no modo de chamada HFP de baixa qualidade.
+
+Modos:
+ - Obter estado: lê os serviços HFP suportados e o estado de backup. Nenhuma alteração é feita.
+ - Reinício suave: reinicia apenas os serviços HFP ativos sem alterar o seu tipo de inicialização.
+   Utilize-o quando o modo de chamada permanecer ativo após uma aplicação deixar de usar o microfone.
+ - Modo rígido: para e desativa o HFP em todo o sistema para forçar a reprodução de alta qualidade A2DP.
+   O microfone do auricular Bluetooth permanece indisponível enquanto o Modo rígido está ativo.
+ - Restaurar: retorna exatamente o estado de arranque e Executar/Parado guardado pelo Modo rígido.
+   Se não existir backup, utiliza os padrões de recuperação Manual + Em execução.
+ - Alterar idioma: abre a lista completa de idiomas e lembra a sua escolha.
+   Na primeira execução, a linguagem da interface é detectada a partir das suas preferências do Windows.
+
+Limitação importante:
+ - O Bluetooth Classic não pode fornecer reprodução com qualidade A2DP enquanto o seu microfone HFP estiver a ser utilizado ativamente.
+   O reinício suave pode limpar uma sessão bloqueada, mas não pode remover esta limitação do protocolo.
+
+Segurança:
+ - O estado não requer Administrador.
+ - Alterar serviços requer Administrador.
+ - Modo rígido cria uma cópia de segurança antes de alterar a configuração do serviço.
+ - Execuções repetidas do Modo rígido preservam a primeira cópia de segurança do estado original.
+ - A restauração mantém o backup se alguma parte da recuperação falhar.
+ - Modo rígido afeta todos os auscultadores Bluetooth Classic nesta instalação do Windows.
+
+Resolução de problemas:
+ - Feche jogos, navegadores, aplicações de chat de voz e de gravação antes do reinício suave.
+ - Se o reset suave não restaurar a qualidade estéreo, use Modo rígido.
+ - Se o Modo rígido desativou o microfone do auscultador, use Restaurar para retornar ao estado anterior.
+ - Recone​cte o auricular ou reinicie a reprodução de áudio após uma operação se uma aplicação tiver guardado em cache a rota de áudio anterior.
+
+Projeto:
+ - https://github.com/Avazbek22/BluetoothHandsFreeToggle

@@ -8,52 +8,88 @@ namespace BluetoothHandsFreeToggle.Tests;
 
 public sealed partial class LocalizationResourceTests
 {
+    private static readonly string[] TechnicalTerms =
+    [
+        "BluetoothHandsFreeToggle", "BTAGService", "BthHFSrv", "Boosty",
+        "A2DP", "HFP", "Win32", "[OK]", "[WARN]", "[ERROR]"
+    ];
+
     [Fact]
-    public void EnglishAndRussianResourcesHaveIdenticalUniqueKeys()
+    public void AllLanguageResourcesHaveIdenticalUniqueKeys()
     {
         var english = LoadResource("en.json");
-        var russian = LoadResource("ru.json");
 
-        Assert.Equal(
-            english.Keys.OrderBy(key => key, StringComparer.Ordinal),
-            russian.Keys.OrderBy(key => key, StringComparer.Ordinal));
+        foreach (var definition in AppLanguageCatalog.All)
+        {
+            var translation = LoadResource($"{definition.ResourceCode}.json");
+            Assert.Equal(
+                english.Keys.OrderBy(key => key, StringComparer.Ordinal),
+                translation.Keys.OrderBy(key => key, StringComparer.Ordinal));
+            Assert.DoesNotContain(translation, item => string.IsNullOrWhiteSpace(item.Value));
+            Assert.DoesNotContain(
+                translation,
+                item => item.Value.Contains("BHFT", StringComparison.Ordinal) ||
+                        item.Value.Contains('\uFFFD'));
+        }
     }
 
     [Fact]
     public void TranslationsUseTheSameFormatPlaceholders()
     {
         var english = LoadResource("en.json");
-        var russian = LoadResource("ru.json");
 
-        foreach (var (key, englishValue) in english)
+        foreach (var definition in AppLanguageCatalog.All)
         {
-            var englishPlaceholders = ReadPlaceholders(englishValue);
-            var russianPlaceholders = ReadPlaceholders(russian[key]);
+            var translation = LoadResource($"{definition.ResourceCode}.json");
+            foreach (var (key, englishValue) in english)
+            {
+                var englishPlaceholders = ReadPlaceholders(englishValue);
+                var translatedPlaceholders = ReadPlaceholders(translation[key]);
 
-            Assert.True(
-                englishPlaceholders.SequenceEqual(russianPlaceholders),
-                $"Placeholder mismatch for '{key}': " +
-                $"EN=[{string.Join(",", englishPlaceholders)}], " +
-                $"RU=[{string.Join(",", russianPlaceholders)}]");
+                Assert.True(
+                    englishPlaceholders.SequenceEqual(translatedPlaceholders),
+                    $"Placeholder mismatch for '{key}' in {definition.Code}: " +
+                    $"EN=[{string.Join(",", englishPlaceholders)}], " +
+                    $"translation=[{string.Join(",", translatedPlaceholders)}]");
+
+                foreach (var term in TechnicalTerms.Where(term => englishValue.Contains(
+                             term,
+                             StringComparison.Ordinal)))
+                {
+                    Assert.Contains(term, translation[key], StringComparison.Ordinal);
+                }
+            }
         }
     }
 
-    [Theory]
-    [InlineData(DocumentationDocument.Help, AppLanguage.English, "Modes:")]
-    [InlineData(DocumentationDocument.Help, AppLanguage.Russian, "Режимы:")]
-    [InlineData(DocumentationDocument.About, AppLanguage.English, "License:")]
-    [InlineData(DocumentationDocument.About, AppLanguage.Russian, "Лицензия:")]
-    public void EmbeddedDocumentationLoadsForEveryLanguage(
-        DocumentationDocument document,
-        AppLanguage language,
-        string expectedLine)
+    [Fact]
+    public void EmbeddedDocumentationLoadsForEveryLanguage()
     {
-        var lines = DocumentationProvider.GetLines(document, language);
-
-        Assert.Contains(lines, line => line.Contains(expectedLine, StringComparison.Ordinal));
-        Assert.DoesNotContain(lines, line => line.Contains(
-            "Documentation is unavailable",
-            StringComparison.Ordinal));
+        var resourceNames = typeof(DocumentationProvider).Assembly.GetManifestResourceNames();
+        foreach (var definition in AppLanguageCatalog.All)
+        {
+            foreach (var document in Enum.GetValues<DocumentationDocument>())
+            {
+                var suffix = $".Docs.{document}.{definition.ResourceCode}.txt";
+                Assert.Single(
+                    resourceNames,
+                    name => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+                var lines = DocumentationProvider.GetLines(document, definition.Language);
+                Assert.True(lines.Count >= 3, $"{document}.{definition.Code} is incomplete.");
+                Assert.DoesNotContain(lines, line => line.Contains(
+                    "Documentation is unavailable",
+                    StringComparison.Ordinal));
+                Assert.DoesNotContain(
+                    lines,
+                    line => line.Contains("BHFT", StringComparison.Ordinal) ||
+                            line.Contains('\uFFFD'));
+                Assert.Contains(
+                    lines,
+                    line => line.Contains(
+                        "https://github.com/Avazbek22/BluetoothHandsFreeToggle",
+                        StringComparison.Ordinal));
+            }
+        }
     }
 
     private static Dictionary<string, string> LoadResource(string fileName)
