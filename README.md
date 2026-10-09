@@ -24,6 +24,7 @@
 </p>
 
 <p align="center">
+  <a href="#app-demo">Demo</a> •
   <a href="#download">Download</a> •
   <a href="#typical-use-cases">Use cases</a> •
   <a href="#choose-your-mode">Modes</a> •
@@ -39,6 +40,17 @@
 > **Call of Duty, Warzone, Discord, or another game opened your Bluetooth microphone—and now the whole game sounds muffled, compressed, or mono?**
 
 BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-quality Bluetooth headset audio caused by the Hands-Free Profile (HFP). Windows can switch gaming headphones from high-quality A2DP stereo to HFP call audio when Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. This tool provides a safe Soft reset and a reliable Hard mode for restoring clear stereo game audio.
+
+---
+
+<a id="app-demo"></a>
+## App demo 🎬
+
+<p align="center">
+  <img src=".github/assets/app-demo.gif" alt="BluetoothHandsFreeToggle console demo: get status, Soft reset, Hard mode, restore the original HFP service state">
+</p>
+
+Check the HFP services, run a **Soft reset**, switch to **Hard mode** for high-quality stereo, then **Restore** the exact saved service state.
 
 ---
 
