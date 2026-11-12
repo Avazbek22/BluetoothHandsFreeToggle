@@ -7,13 +7,31 @@ using Microsoft.Win32;
 namespace BluetoothHandsFreeToggle.Gui.Services;
 
 /// <summary>Starts the tray app at sign-in through the per-user Run key (no administrator rights).</summary>
-public sealed class RegistryAutostart(string executablePath) : IAutostart
+public sealed class RegistryAutostart : IAutostart
 {
-    private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string StartupApprovedPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
+    private const string DefaultRunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string DefaultStartupApprovedPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private const string ValueName = AppInfo.AppName;
 
-    private string Command => $"\"{executablePath}\" {LaunchOptions.TrayArgument}";
+    private readonly string _executablePath;
+    private readonly string _runKeyPath;
+    private readonly string _startupApprovedPath;
+
+    public RegistryAutostart(string executablePath)
+        : this(executablePath, DefaultRunKeyPath, DefaultStartupApprovedPath)
+    {
+    }
+
+    /// <summary>Uses other keys under HKEY_CURRENT_USER (tests).</summary>
+    internal RegistryAutostart(string executablePath, string runKeyPath, string startupApprovedPath)
+    {
+        _executablePath = executablePath;
+        _runKeyPath = runKeyPath;
+        _startupApprovedPath = startupApprovedPath;
+    }
+
+    /// <summary>The Run value: the quoted path, so spaces in the install folder are safe.</summary>
+    internal string Command => $"\"{_executablePath}\" {LaunchOptions.TrayArgument}";
 
     public bool IsEnabled
     {
@@ -21,12 +39,12 @@ public sealed class RegistryAutostart(string executablePath) : IAutostart
         {
             try
             {
-                using var run = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+                using var run = Registry.CurrentUser.OpenSubKey(_runKeyPath);
                 if (run?.GetValue(ValueName) is not string)
                     return false;
 
                 // Task Manager's "Disable" keeps the Run value and marks it here (odd first byte).
-                using var approved = Registry.CurrentUser.OpenSubKey(StartupApprovedPath);
+                using var approved = Registry.CurrentUser.OpenSubKey(_startupApprovedPath);
                 return approved?.GetValue(ValueName) is not byte[] { Length: > 0 } state || (state[0] & 1) == 0;
             }
             catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
@@ -40,11 +58,11 @@ public sealed class RegistryAutostart(string executablePath) : IAutostart
     {
         try
         {
-            using var run = Registry.CurrentUser.CreateSubKey(RunKeyPath, writable: true);
+            using var run = Registry.CurrentUser.CreateSubKey(_runKeyPath, writable: true);
             if (enabled)
             {
                 run.SetValue(ValueName, Command, RegistryValueKind.String);
-                using var approved = Registry.CurrentUser.OpenSubKey(StartupApprovedPath, writable: true);
+                using var approved = Registry.CurrentUser.OpenSubKey(_startupApprovedPath, writable: true);
                 approved?.DeleteValue(ValueName, throwOnMissingValue: false);
             }
             else
@@ -65,7 +83,7 @@ public sealed class RegistryAutostart(string executablePath) : IAutostart
     {
         try
         {
-            using var run = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
+            using var run = Registry.CurrentUser.OpenSubKey(_runKeyPath, writable: true);
             if (run?.GetValue(ValueName) is string current &&
                 !string.Equals(current, Command, StringComparison.OrdinalIgnoreCase))
             {
@@ -107,16 +125,30 @@ public sealed class FileGuiSettingsStore(string? filePath = null) : IGuiSettings
 
     public void Save(GuiSettings settings)
     {
+        // Written next to the file and moved over it, so a crash never leaves half a file.
+        var temporaryPath = _filePath + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-            var temporaryPath = _filePath + ".tmp";
             File.WriteAllText(temporaryPath, JsonSerializer.Serialize(settings, GuiSettingsJsonContext.Default.GuiSettings));
             File.Move(temporaryPath, _filePath, overwrite: true);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             // Settings are a convenience; the app keeps working with the values in memory.
+            TryDelete(temporaryPath);
+        }
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Overwritten by the next save.
         }
     }
 }
