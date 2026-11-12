@@ -46,8 +46,13 @@ public sealed class TrayController : IShell, IDisposable
         autostart.RefreshPath();
 
         _viewModel = new FlyoutViewModel(runner, autostart, new FileGuiSettingsStore(), this);
+        _monitor = new StatusMonitor(new EngineStatusSource(engine), _viewModel.ApplyStatus);
         _window = new FlyoutWindow { DataContext = _viewModel };
-        _window.PanelHidden += (_, _) => _viewModel.OnHidden();
+        _window.PanelHidden += (_, _) =>
+        {
+            _monitor.PanelVisible = false;
+            _viewModel.OnHidden();
+        };
 
         _icon = new NotifyIcon();
         _icon.Activated += (_, anchor) => TogglePanel(anchor);
@@ -70,10 +75,6 @@ public sealed class TrayController : IShell, IDisposable
                 _ticker.IsEnabled = _viewModel.Mode == FlyoutMode.Working;
         };
 
-        _monitor = new StatusMonitor(
-            new EngineStatusSource(engine),
-            _viewModel.ApplyStatus,
-            () => _window.IsShown);
         _viewModel.StatusRefreshRequested += (_, _) => _monitor.RefreshNow();
 
         UpdateIcon(_viewModel.TrayState);
@@ -90,10 +91,15 @@ public sealed class TrayController : IShell, IDisposable
 
     public void ShowPanel(FlyoutPage page = FlyoutPage.Main)
     {
+        // A second launch may still be signalled while the app is exiting.
+        if (_disposed)
+            return;
+
         if (page != FlyoutPage.Main)
             _viewModel.Page = page;
 
         _window.ShowPanel(_icon.GetIconRect());
+        _monitor.PanelVisible = true;
         _monitor.RefreshNow();
     }
 
@@ -110,6 +116,7 @@ public sealed class TrayController : IShell, IDisposable
             return;
 
         _window.ShowPanel(anchor);
+        _monitor.PanelVisible = true;
         _monitor.RefreshNow();
     }
 
@@ -162,10 +169,18 @@ public sealed class TrayController : IShell, IDisposable
         if (_disposed)
             return;
 
-        var size = TrayIconRenderer.SmallIconSize;
-        var glyph = TrayIconRenderer.TaskbarIsLight ? Color.Parse("#1C1C1F") : Colors.White;
-        Color? dot = state.Dot is { } tone ? Palette.ToneColor(tone) : null;
-        _icon.Update(TrayIconRenderer.RenderPng(size, glyph, dot), size, state.Tooltip);
+        try
+        {
+            var size = TrayIconRenderer.SmallIconSize;
+            var glyph = TrayIconRenderer.TaskbarIsLight ? Color.Parse("#1C1C1F") : Colors.White;
+            Color? dot = state.Dot is { } tone ? Palette.ToneColor(tone) : null;
+            _icon.Update(TrayIconRenderer.RenderPng(size, glyph, dot), size, state.Tooltip);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // Keep the previous icon; the next status change tries again.
+            CrashLog.Write("Updating the tray icon failed", exception);
+        }
     }
 
     // ----- IShell -----
@@ -180,8 +195,22 @@ public sealed class TrayController : IShell, IDisposable
 
     public async Task CopyTextAsync(string text)
     {
-        if (_window.Clipboard is { } clipboard)
-            await clipboard.SetTextAsync(text);
+        if (_window.Clipboard is not { } clipboard)
+            return;
+
+        // Another app may hold the clipboard open for a moment; try a few times.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await clipboard.SetTextAsync(text);
+                return;
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException && attempt < 3)
+            {
+                await Task.Delay(120);
+            }
+        }
     }
 
     public void Quit()
