@@ -22,13 +22,14 @@ public static class AdminHelper
         }
     }
 
-    public static bool TryRelaunchAsAdministrator(string executablePath)
+    public static bool TryRelaunchAsAdministrator(string executablePath, string arguments = "")
     {
         try
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = executablePath,
+                Arguments = arguments,
                 UseShellExecute = true,
                 Verb = "runas"
             };
