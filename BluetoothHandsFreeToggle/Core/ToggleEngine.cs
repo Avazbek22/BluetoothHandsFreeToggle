@@ -56,6 +56,12 @@ public sealed class ToggleEngine
         }
     }
 
+    /// <summary>
+    /// The current state of the HFP services. Read-only, needs no administrator rights and takes a
+    /// few milliseconds, so a UI can poll it.
+    /// </summary>
+    public IReadOnlyList<ServiceSnapshot> GetServiceSnapshots() => GetSnapshots();
+
     public ToggleReport GetStatusReport()
     {
         var snapshots = GetSnapshots();
@@ -269,7 +275,9 @@ public sealed class ToggleEngine
             // SCM failure actions while it is being stopped, which also makes forced recovery final.
             progress?.Report(new OperationEvent(
                 OperationEventKind.Step,
-                Text.Format("progress.disabling", snapshot.FriendlyName)));
+                Text.Format("progress.disabling", snapshot.FriendlyName),
+                Step: OperationStep.Disabling,
+                Service: snapshot.FriendlyName));
 
             if (_services.TrySetStartType(
                     snapshot.ServiceName,
@@ -547,7 +555,9 @@ public sealed class ToggleEngine
             Text.Format(
                 "progress.settingStartup",
                 snapshot.FriendlyName,
-                ServiceStateText.Get(startType))));
+                ServiceStateText.Get(startType)),
+            Step: OperationStep.SettingStartup,
+            Service: snapshot.FriendlyName));
 
     private static void AddRestoredStateLine(DesiredServiceState desired, OperationLog log)
     {
