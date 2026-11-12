@@ -69,7 +69,10 @@ public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
                 .Select(client => new CaptureClient(client.DeviceId, identities.Resolve(client.ProcessId)))
                 .ToList();
 
-            return new MicrophoneProbeResult(devices.Devices, clients, devices.Error);
+            return new MicrophoneProbeResult(devices.Devices, clients, devices.Error)
+            {
+                Headsets = devices.Headsets
+            };
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -113,10 +116,15 @@ public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
         if (hr < 0)
             return DeviceProbe.Failed(FormatHResult("IMMDeviceCollection.GetCount", hr));
 
-        var bluetoothContainers = BluetoothDeviceIndex.GetBluetoothContainerIds();
+        var bluetoothContainers = BluetoothDeviceIndex.GetBluetoothContainers();
         var devices = new List<CaptureDevice>();
         var clients = new List<RawClient>();
         var errors = new List<string>();
+        var headsets = new List<string>();
+
+        // A connected headset always has an active playback endpoint (A2DP or Hands-Free), also
+        // while Hard mode keeps its microphone switched off.
+        CollectBluetoothPlayback(enumerator.Value, bluetoothContainers, headsets);
 
         for (uint index = 0; index < count; index++)
         {
@@ -132,7 +140,10 @@ public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
                 continue;
 
             var (name, containerId) = ReadProperties(device.Value);
-            var isBluetooth = containerId is { } container && bluetoothContainers.Contains(container);
+            var isBluetooth = containerId is { } container && bluetoothContainers.ContainsKey(container);
+            if (isBluetooth)
+                AddHeadset(headsets, bluetoothContainers[containerId!.Value] ?? name);
+
             devices.Add(new CaptureDevice(
                 id,
                 name ?? id,
@@ -147,7 +158,46 @@ public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
                 errors.Add($"{name ?? id}: {sessionError}");
         }
 
-        return new DeviceProbe(devices, clients, errors.Count > 0 ? string.Join("; ", errors) : null);
+        return new DeviceProbe(devices, clients, errors.Count > 0 ? string.Join("; ", errors) : null)
+        {
+            Headsets = headsets
+        };
+    }
+
+    private static void CollectBluetoothPlayback(
+        IMMDeviceEnumerator enumerator,
+        Dictionary<Guid, string?> bluetoothContainers,
+        List<string> headsets)
+    {
+        if (bluetoothContainers.Count == 0 ||
+            enumerator.EnumAudioEndpoints(DataFlowRender, DeviceStateActive, out var rawCollection) < 0)
+        {
+            return;
+        }
+
+        using var collection = ComRef<IMMDeviceCollection>.TryWrap(rawCollection);
+        if (collection is null || collection.Value.GetCount(out var count) < 0)
+            return;
+
+        for (uint index = 0; index < count; index++)
+        {
+            if (collection.Value.Item(index, out var rawDevice) < 0)
+                continue;
+
+            using var device = ComRef<IMMDevice>.TryWrap(rawDevice);
+            if (device is null)
+                continue;
+
+            var (name, containerId) = ReadProperties(device.Value);
+            if (containerId is { } container && bluetoothContainers.TryGetValue(container, out var deviceName))
+                AddHeadset(headsets, deviceName ?? name);
+        }
+    }
+
+    private static void AddHeadset(List<string> headsets, string? name)
+    {
+        if (!string.IsNullOrWhiteSpace(name) && !headsets.Contains(name, StringComparer.OrdinalIgnoreCase))
+            headsets.Add(name);
     }
 
     private static string? CollectActiveClients(IMMDevice device, string deviceId, List<RawClient> clients)
@@ -231,6 +281,8 @@ public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
 
     private sealed record DeviceProbe(List<CaptureDevice> Devices, List<RawClient> Clients, string? Error)
     {
+        public List<string> Headsets { get; init; } = [];
+
         public static DeviceProbe Failed(string error) => new([], [], error);
     }
 }
