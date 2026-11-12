@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using BluetoothHandsFreeToggle.Core;
 using static BluetoothHandsFreeToggle.Windows.CoreAudioInterop;
 
@@ -14,37 +15,99 @@ namespace BluetoothHandsFreeToggle.Windows;
 /// The privacy usage log in the registry (ConsentStore LastUsedTimeStart/Stop) is deliberately not
 /// used: recent Windows 11 builds no longer update it, so it would report stale "in use" entries.
 /// </remarks>
+[SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "The probe and its worker live as long as the process; a hung probe may still signal the events after any Dispose.")]
 public sealed class WindowsMicrophoneProbe : IMicrophoneProbe
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(5);
 
     private readonly TimeSpan _timeout;
+    private readonly Func<MicrophoneProbeResult> _probe;
+    private readonly Lock _gate = new();
+    private readonly AutoResetEvent _requested = new(initialState: false);
+
+    // Set while the worker is idle; reset while a probe runs (or hangs).
+    private readonly ManualResetEventSlim _idle = new(initialState: true);
+    private volatile MicrophoneProbeResult? _result;
+    private Thread? _worker;
 
     public WindowsMicrophoneProbe(TimeSpan? timeout = null)
+        : this(timeout, ProbeCore)
     {
-        _timeout = timeout ?? DefaultTimeout;
     }
 
+    /// <param name="probe">The probe body run on the worker thread; replaceable in tests.</param>
+    internal WindowsMicrophoneProbe(TimeSpan? timeout, Func<MicrophoneProbeResult> probe)
+    {
+        _timeout = timeout ?? DefaultTimeout;
+        _probe = probe;
+    }
+
+    /// <remarks>
+    /// Probes run one at a time on one long-lived MTA thread: COM stays independent of the caller
+    /// (an STA UI thread works too), no thread is created per check, and the timeout keeps a hung
+    /// Windows Audio service from freezing the caller. A probe stuck in Windows Audio cannot be
+    /// cancelled, so until it returns every call answers "did not respond" at once.
+    /// </remarks>
     public MicrophoneProbeResult Probe()
     {
-        // A dedicated MTA thread keeps COM independent of the caller (an STA UI thread works too),
-        // and the timeout keeps a hung Windows Audio service from freezing the caller.
-        MicrophoneProbeResult? result = null;
-        var thread = new Thread(() => result = ProbeCore())
+        lock (_gate)
+        {
+            if (!_idle.IsSet)
+                return TimedOut();
+
+            EnsureWorker();
+            _result = null;
+            _idle.Reset();
+            _requested.Set();
+
+            if (!_idle.Wait(_timeout))
+                return TimedOut();
+
+            return _result ?? MicrophoneProbeResult.Failed("The microphone probe returned no result.");
+        }
+    }
+
+    private void EnsureWorker()
+    {
+        if (_worker is not null)
+            return;
+
+        _worker = new Thread(Work)
         {
             IsBackground = true,
             Name = "Microphone diagnostics"
         };
-        thread.SetApartmentState(ApartmentState.MTA);
-        thread.Start();
+        _worker.SetApartmentState(ApartmentState.MTA);
+        _worker.Start();
+    }
 
-        if (!thread.Join(_timeout))
+    private void Work()
+    {
+        while (true)
         {
-            return MicrophoneProbeResult.Failed(
-                $"Windows Audio did not respond within {_timeout.TotalSeconds:0} s.");
+            _requested.WaitOne();
+            _result = RunProbe(_probe);
+            _idle.Set();
         }
+    }
 
-        return result ?? MicrophoneProbeResult.Failed("The microphone probe returned no result.");
+    private MicrophoneProbeResult TimedOut()
+        => MicrophoneProbeResult.Failed($"Windows Audio did not respond within {_timeout.TotalSeconds:0} s.");
+
+    private static MicrophoneProbeResult RunProbe(Func<MicrophoneProbeResult> probe)
+    {
+        try
+        {
+            return probe();
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // This runs on a worker thread: an escaping exception would terminate the process.
+            return MicrophoneProbeResult.Failed(exception.Message);
+        }
     }
 
     private static MicrophoneProbeResult ProbeCore()
