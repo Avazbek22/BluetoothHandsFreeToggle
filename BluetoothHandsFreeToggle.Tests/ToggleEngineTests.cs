@@ -1,4 +1,5 @@
 using BluetoothHandsFreeToggle.Core;
+using BluetoothHandsFreeToggle.Localization;
 using Xunit;
 
 namespace BluetoothHandsFreeToggle.Tests;
@@ -682,15 +683,128 @@ public sealed class ToggleEngineTests
         Assert.Contains(report.Lines, line => line.Contains("restart the computer or run a program", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void StatusNamesAppsThatHoldTheHeadsetMicrophone()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var engine = CreateEngine(
+            services,
+            new MemoryBackupStore(),
+            microphones: FakeMicrophoneProbe.HeadsetUsedBy("Discord", "Zoom"));
+
+        var report = engine.GetStatusReport();
+
+        Assert.Contains(report.Lines, line =>
+            line.StartsWith("[WARN]", StringComparison.Ordinal) &&
+            line.Contains("Discord, Zoom", StringComparison.Ordinal) &&
+            line.Contains(Headset.Name, StringComparison.Ordinal));
+        Assert.Contains(report.Lines, line => line.Contains("default microphone", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SoftResetWarnsThatAnAppWillReopenHandsFreeButStillResets()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var microphones = FakeMicrophoneProbe.HeadsetUsedBy("Discord");
+        var engine = CreateEngine(services, new MemoryBackupStore(), microphones: microphones);
+
+        var report = engine.SoftResetHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Equal(1, services.StopCalls);
+        Assert.Equal(1, services.StartCalls);
+        Assert.Equal(1, microphones.Calls);
+        Assert.Contains(report.Lines, line =>
+            line.StartsWith("[WARN]", StringComparison.Ordinal) &&
+            line.Contains("Discord", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SoftResetConfirmsFreeHeadsetMicrophoneInsteadOfGenericAdvice()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var engine = CreateEngine(services, new MemoryBackupStore(), microphones: FakeMicrophoneProbe.HeadsetUsedBy());
+
+        var report = engine.SoftResetHandsFree();
+
+        Assert.Contains(Text.Get("mic.soft.idle"), report.Lines);
+        Assert.DoesNotContain(Text.Get("soft.closeMicrophoneApps"), report.Lines);
+    }
+
+    [Fact]
+    public void FailingMicrophoneProbeNeverBreaksAnOperation()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var microphones = new FakeMicrophoneProbe(() => throw new InvalidOperationException("audio stack broken"));
+        var engine = CreateEngine(services, new MemoryBackupStore(), microphones: microphones);
+
+        var status = engine.GetStatusReport();
+        var soft = engine.SoftResetHandsFree();
+
+        Assert.Contains(status.Lines, line => line.Contains("audio stack broken", StringComparison.Ordinal));
+        Assert.True(soft.Success);
+        Assert.Contains(Text.Get("soft.closeMicrophoneApps"), soft.Lines);
+    }
+
+    [Fact]
+    public void HardModeNamesAppsThatLoseTheHeadsetMicrophone()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var engine = CreateEngine(
+            services,
+            new MemoryBackupStore(),
+            microphones: FakeMicrophoneProbe.HeadsetUsedBy("Microsoft Teams"));
+
+        var report = engine.HardDisableHandsFree();
+
+        Assert.True(report.Success);
+        Assert.Contains(report.Lines, line =>
+            line.StartsWith("[WARN]", StringComparison.Ordinal) &&
+            line.Contains("Microsoft Teams", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void EngineWithoutMicrophoneProbeKeepsGenericAdvice()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        var engine = CreateEngine(services, new MemoryBackupStore());
+
+        Assert.Null(engine.DiagnoseMicrophone());
+        Assert.Contains(Text.Get("soft.closeMicrophoneApps"), engine.SoftResetHandsFree().Lines);
+    }
+
+    private static readonly CaptureDevice Headset = new("headset", "Headset (WH-1000XM5)", true, false, true);
+
     private static ToggleEngine CreateEngine(
         IServiceManager services,
         IBackupStore backup,
-        FakeClock? clock = null)
+        FakeClock? clock = null,
+        IMicrophoneProbe? microphones = null)
         => new(
             services,
             backup,
             $"BluetoothHandsFreeToggle.Tests.{Guid.NewGuid():N}",
-            clock ?? new FakeClock());
+            clock ?? new FakeClock(),
+            microphones: microphones);
+
+    private sealed class FakeMicrophoneProbe(Func<MicrophoneProbeResult> probe) : IMicrophoneProbe
+    {
+        public int Calls { get; private set; }
+
+        public static FakeMicrophoneProbe HeadsetUsedBy(params string[] apps)
+            => new(() => new MicrophoneProbeResult(
+                [Headset],
+                apps.Select((app, index) => new CaptureClient(
+                    Headset.Id,
+                    new AppIdentity(1000 + index, app, $@"C:\Apps\{app}.exe", null))).ToList(),
+                null));
+
+        public MicrophoneProbeResult Probe()
+        {
+            Calls++;
+            return probe();
+        }
+    }
 
     private sealed class FakeClock : IOperationClock
     {

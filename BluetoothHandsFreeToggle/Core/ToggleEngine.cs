@@ -13,9 +13,10 @@ public sealed class ToggleEngine
     private readonly string _mutexName;
     private readonly IOperationClock _clock;
     private readonly ServiceTimings _timings;
+    private readonly IMicrophoneProbe? _microphones;
 
     public ToggleEngine()
-        : this(new WindowsServiceManager(), new BackupStore())
+        : this(new WindowsServiceManager(), new BackupStore(), microphones: new WindowsMicrophoneProbe())
     {
     }
 
@@ -24,13 +25,35 @@ public sealed class ToggleEngine
         IBackupStore backup,
         string mutexName = @"Global\BluetoothHandsFreeToggle.Operation",
         IOperationClock? clock = null,
-        ServiceTimings? timings = null)
+        ServiceTimings? timings = null,
+        IMicrophoneProbe? microphones = null)
     {
         _services = services;
         _backup = backup;
         _mutexName = mutexName;
         _clock = clock ?? new SystemOperationClock();
         _timings = timings ?? ServiceTimings.Default;
+        _microphones = microphones;
+    }
+
+    /// <summary>
+    /// Finds the apps recording from the Bluetooth headset microphone: while one does, Windows keeps
+    /// the headset in Hands-Free and a Soft reset cannot last. Read-only; takes tens of milliseconds
+    /// and is bounded by a timeout. Returns <c>null</c> when no microphone probe is configured.
+    /// </summary>
+    public MicrophoneDiagnosis? DiagnoseMicrophone()
+    {
+        if (_microphones is null)
+            return null;
+
+        try
+        {
+            return MicrophoneDiagnostics.Analyze(_microphones.Probe());
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            return MicrophoneDiagnosis.Unavailable(exception.Message);
+        }
     }
 
     public ToggleReport GetStatusReport()
@@ -67,6 +90,8 @@ public sealed class ToggleEngine
                 ServiceStateText.Get(snapshot.RunState)));
         }
 
+        AddMicrophoneStatus(DiagnoseMicrophone(), log);
+
         return BuildReport(ReportTitles.Status, snapshots, log);
     }
 
@@ -85,7 +110,9 @@ public sealed class ToggleEngine
         var log = new OperationLog();
         log.Lines.Add(Text.Get("soft.intro"));
         log.Lines.Add(Text.Get("soft.preserveMicrophone"));
-        log.Lines.Add(Text.Get("soft.closeMicrophoneApps"));
+
+        // Checked before the restart: stopping the service removes the headset microphone.
+        AddMicrophoneSoftNotes(DiagnoseMicrophone(), log);
 
         AddQueryErrors(before, log);
         if (log.Errors.Count > 0)
@@ -145,6 +172,8 @@ public sealed class ToggleEngine
         var log = new OperationLog();
         log.Lines.Add(Text.Get("hard.intro"));
         log.Lines.Add(Text.Get("hard.microphoneUnavailable"));
+
+        var microphone = DiagnoseMicrophone();
 
         AddQueryErrors(before, log);
         if (log.Errors.Count > 0)
@@ -230,6 +259,9 @@ public sealed class ToggleEngine
 
             log.Lines.Add(Text.Format("hard.originalSaved", _backup.BackupPath));
         }
+
+        if (microphone?.Verdict is MicrophoneVerdict.InUse)
+            log.Warnings.Add(Text.Format("mic.hard.inUse", JoinAppNames(microphone.BluetoothApps)));
 
         foreach (var snapshot in before.Where(snapshot => snapshot.Exists))
         {
@@ -580,6 +612,71 @@ public sealed class ToggleEngine
 
         return DesiredStateResolution.Resolved(desired, warning);
     }
+
+    private static void AddMicrophoneStatus(MicrophoneDiagnosis? diagnosis, OperationLog log)
+    {
+        if (diagnosis is null)
+            return;
+
+        switch (diagnosis.Verdict)
+        {
+            case MicrophoneVerdict.InUse:
+                log.Warnings.Add(Text.Format(
+                    "mic.status.inUse",
+                    JoinAppNames(diagnosis.BluetoothApps),
+                    string.Join(", ", diagnosis.BluetoothApps
+                        .SelectMany(app => app.DeviceNames)
+                        .Distinct(StringComparer.OrdinalIgnoreCase))));
+                break;
+
+            case MicrophoneVerdict.Idle:
+                log.Lines.Add(Text.Format(
+                    "mic.status.idle",
+                    string.Join(", ", diagnosis.BluetoothMicrophones.Select(device => device.Name))));
+                break;
+
+            case MicrophoneVerdict.NoBluetoothMicrophone:
+                log.Lines.Add(Text.Get("mic.status.notDetected"));
+                break;
+
+            default:
+                log.Lines.Add(Text.Format(
+                    "mic.unavailable",
+                    diagnosis.Error ?? Text.Get("service.unknownError")));
+                break;
+        }
+
+        if (diagnosis.DefaultBluetoothMicrophone is { } defaultMicrophone)
+            log.Lines.Add(Text.Format("mic.defaultDevice", defaultMicrophone.Name));
+
+        if (diagnosis.OtherApps.Count > 0)
+            log.Lines.Add(Text.Format("mic.status.otherDevice", JoinAppNames(diagnosis.OtherApps)));
+    }
+
+    private static void AddMicrophoneSoftNotes(MicrophoneDiagnosis? diagnosis, OperationLog log)
+    {
+        switch (diagnosis?.Verdict)
+        {
+            case MicrophoneVerdict.InUse:
+                log.Warnings.Add(Text.Format("mic.soft.inUse", JoinAppNames(diagnosis.BluetoothApps)));
+                break;
+
+            case MicrophoneVerdict.Idle:
+                log.Lines.Add(Text.Get("mic.soft.idle"));
+                break;
+
+            case MicrophoneVerdict.NoBluetoothMicrophone:
+                break;
+
+            default:
+                // Unknown: fall back to the general advice.
+                log.Lines.Add(Text.Get("soft.closeMicrophoneApps"));
+                break;
+        }
+    }
+
+    private static string JoinAppNames(IEnumerable<MicrophoneApp> apps)
+        => string.Join(", ", apps.Select(app => app.Name));
 
     private static bool IsRestorableStartType(ServiceStartType startType)
         => startType is

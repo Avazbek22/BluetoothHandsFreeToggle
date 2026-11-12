@@ -8,6 +8,8 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <AnalysisLevel>latest-recommended</AnalysisLevel>
+        <!-- Required by the source-generated (trim- and AOT-safe) COM interop for Core Audio. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
         <AssemblyName>BluetoothHandsFreeToggle</AssemblyName>
         <RootNamespace>BluetoothHandsFreeToggle</RootNamespace>
