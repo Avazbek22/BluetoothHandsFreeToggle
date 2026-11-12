@@ -92,6 +92,42 @@ public sealed partial class LocalizationResourceTests
         }
     }
 
+    [Fact]
+    public void EveryLocalizationKeyUsedInCodeExistsInEnglish()
+    {
+        var english = LoadResource("en.json");
+        var prefixes = english.Keys
+            .Select(key => key[..(key.IndexOf('.', StringComparison.Ordinal) + 1)])
+            .ToHashSet(StringComparer.Ordinal);
+        var sourceRoot = Path.Combine(FindRepositoryRoot(), "BluetoothHandsFreeToggle");
+
+        var missing = Directory
+            .EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .SelectMany(path => KeyLiteralRegex().Matches(File.ReadAllText(path)).Select(match => match.Groups[1].Value))
+            .Where(key => prefixes.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal)))
+            .Where(key => !key.EndsWith(".json", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .Where(key => !english.ContainsKey(key))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.True(missing.Count == 0, $"Keys used in code but missing from en.json: {string.Join(", ", missing)}");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "BluetoothHandsFreeToggle.sln")))
+            directory = directory.Parent;
+
+        return directory?.FullName
+               ?? throw new InvalidOperationException("Repository root was not found.");
+    }
+
+    [GeneratedRegex(@"""([a-z]+\.[A-Za-z.]+)""", RegexOptions.CultureInvariant)]
+    private static partial Regex KeyLiteralRegex();
+
     private static Dictionary<string, string> LoadResource(string fileName)
     {
         var assembly = typeof(LocalizationService).Assembly;
