@@ -8,8 +8,7 @@ namespace BluetoothHandsFreeToggle.App;
 /// </summary>
 public sealed class SingleInstance : IDisposable
 {
-    private const string MutexName = @"Local\BluetoothHandsFreeToggle.Tray";
-    private const string ShowEventName = @"Local\BluetoothHandsFreeToggle.Tray.Show";
+    private const string DefaultName = @"Local\BluetoothHandsFreeToggle.Tray";
 
     // ASFW_ANY: lets the running instance take the foreground for the panel it is asked to show.
     private const int AsfwAny = -1;
@@ -18,6 +17,7 @@ public sealed class SingleInstance : IDisposable
     private readonly EventWaitHandle _showEvent;
     private readonly CancellationTokenSource _stop = new();
     private Thread? _listener;
+    private bool _disposed;
 
     private SingleInstance(Mutex mutex, EventWaitHandle showEvent)
     {
@@ -25,31 +25,55 @@ public sealed class SingleInstance : IDisposable
         _showEvent = showEvent;
     }
 
-    public static SingleInstance? TryAcquire()
+    /// <returns>The instance, or <c>null</c> when another tray app already runs in this session.</returns>
+    public static SingleInstance? TryAcquire() => TryAcquire(DefaultName);
+
+    public static void SignalRunningInstance() => SignalRunningInstance(DefaultName);
+
+    internal static SingleInstance? TryAcquire(string name)
     {
-        var mutex = new Mutex(initiallyOwned: true, MutexName, out var createdNew);
-        if (!createdNew)
+        Mutex mutex;
+        try
         {
-            mutex.Dispose();
+            mutex = new Mutex(initiallyOwned: true, name, out var createdNew);
+            if (!createdNew)
+            {
+                mutex.Dispose();
+                return null;
+            }
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or WaitHandleCannotBeOpenedException)
+        {
+            // The mutex exists but belongs to an instance started as administrator: it is running.
             return null;
         }
 
-        var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
-        return new SingleInstance(mutex, showEvent);
+        try
+        {
+            var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, name + ".Show");
+            return new SingleInstance(mutex, showEvent);
+        }
+        catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or WaitHandleCannotBeOpenedException)
+        {
+            mutex.ReleaseMutex();
+            mutex.Dispose();
+            return null;
+        }
     }
 
-    public static void SignalRunningInstance()
+    internal static void SignalRunningInstance(string name)
     {
         _ = AllowSetForegroundWindow(AsfwAny);
 
         try
         {
-            using var showEvent = EventWaitHandle.OpenExisting(ShowEventName);
+            using var showEvent = EventWaitHandle.OpenExisting(name + ".Show");
             showEvent.Set();
         }
-        catch (WaitHandleCannotBeOpenedException)
+        catch (Exception exception) when (exception is WaitHandleCannotBeOpenedException or UnauthorizedAccessException or IOException)
         {
-            // The first instance is still starting or already exiting.
+            // The first instance is still starting, already exiting, or runs as administrator
+            // (a non-elevated process may not signal it). Nothing else to do.
         }
     }
 
@@ -57,12 +81,23 @@ public sealed class SingleInstance : IDisposable
     public void Listen(Action onShowRequested)
     {
         ArgumentNullException.ThrowIfNull(onShowRequested);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         _listener = new Thread(() =>
         {
             var handles = new[] { _showEvent, _stop.Token.WaitHandle };
             while (WaitHandle.WaitAny(handles) == 0)
-                onShowRequested();
+            {
+                try
+                {
+                    onShowRequested();
+                }
+                catch (Exception exception) when (exception is not OutOfMemoryException)
+                {
+                    // An escaping exception would end the process from this background thread.
+                    CrashLog.Write("Showing the panel for a second launch failed", exception);
+                }
+            }
         })
         {
             IsBackground = true,
@@ -73,6 +108,10 @@ public sealed class SingleInstance : IDisposable
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
         _stop.Cancel();
         _listener?.Join(TimeSpan.FromSeconds(1));
         _showEvent.Dispose();
