@@ -23,6 +23,10 @@ public sealed unsafe class NotifyIcon : IDisposable
     private const uint WmDestroy = 0x0002;
     private const uint WmSettingChange = 0x001A;
     private const uint WmContextMenu = 0x007B;
+    private const uint WmTimer = 0x0113;
+    private const uint MsgfltAllow = 1;
+    private const nuint RetryTimerId = 1;
+    private const uint RetryIntervalMs = 3000;
     private const uint NinSelect = 0x0400;
     private const uint NinKeySelect = 0x0401;
     private const uint NinBalloonUserClick = 0x0405;
@@ -58,6 +62,7 @@ public sealed unsafe class NotifyIcon : IDisposable
     private IntPtr _balloonIcon;
     private string _tooltip = "";
     private bool _added;
+    private bool _retrying;
     private bool _disposed;
 
     public NotifyIcon()
@@ -86,6 +91,13 @@ public sealed unsafe class NotifyIcon : IDisposable
             throw new Win32Exception(Marshal.GetLastPInvokeError());
 
         Instances[_hwnd] = this;
+
+        // When the app runs as administrator, Explorer (a lower integrity level) may otherwise not
+        // deliver clicks or the TaskbarCreated broadcast to this window.
+        _ = ChangeWindowMessageFilterEx(_hwnd, CallbackMessage, MsgfltAllow, IntPtr.Zero);
+        if (TaskbarCreatedMessage != 0)
+            _ = ChangeWindowMessageFilterEx(_hwnd, TaskbarCreatedMessage, MsgfltAllow, IntPtr.Zero);
+
         DarkMenus.Enable(_hwnd);
     }
 
@@ -97,7 +109,7 @@ public sealed unsafe class NotifyIcon : IDisposable
 
     public event EventHandler? BalloonClicked;
 
-    /// <summary>The Windows colour mode changed (light/dark taskbar).</summary>
+    /// <summary>The taskbar theme or the display scale changed, or Explorer restarted: redraw the icon.</summary>
     public event EventHandler? ThemeChanged;
 
     /// <summary>Sets the icon (PNG data at the small-icon size) and the tooltip, adding the icon on first use.</summary>
@@ -211,6 +223,7 @@ public sealed unsafe class NotifyIcon : IDisposable
             return;
 
         _disposed = true;
+        StopRetry();
         if (_added)
         {
             var data = CreateData(0);
@@ -230,25 +243,64 @@ public sealed unsafe class NotifyIcon : IDisposable
 
     private void Apply(uint message)
     {
+        if (_disposed || _icon == IntPtr.Zero)
+            return;
+
         var data = CreateData(NifMessage | NifIcon | NifTip | NifShowTip);
         data.CallbackMessage = CallbackMessage;
         data.Icon = _icon;
         Copy(_tooltip, data.Tip, 128);
 
-        if (ShellNotifyIconW(message, &data) == 0)
+        if (ShellNotifyIconW(message, &data) != 0)
         {
-            // Explorer may not be ready yet at sign-in; TaskbarCreated re-adds the icon later.
-            if (message == NimModify)
-                _added = false;
+            if (message == NimAdd)
+                Added(ref data);
             return;
         }
 
-        if (message == NimAdd)
+        if (message == NimModify)
         {
-            _added = true;
-            data.TimeoutOrVersion = NotifyIconVersion4;
-            _ = ShellNotifyIconW(NimSetVersion, &data);
+            // The icon is gone (Explorer restarted and the broadcast was missed): add it again.
+            _added = false;
+            Apply(NimAdd);
+            return;
         }
+
+        // Adding fails while Explorer is still starting at sign-in, and under load it can time out
+        // although the icon was added. Updating tells the two apart; otherwise try again shortly.
+        if (ShellNotifyIconW(NimModify, &data) != 0)
+        {
+            Added(ref data);
+            return;
+        }
+
+        StartRetry();
+    }
+
+    private void Added(ref NotifyIconData data)
+    {
+        _added = true;
+        StopRetry();
+        data.TimeoutOrVersion = NotifyIconVersion4;
+        fixed (NotifyIconData* pointer = &data)
+            _ = ShellNotifyIconW(NimSetVersion, pointer);
+    }
+
+    private void StartRetry()
+    {
+        if (_retrying)
+            return;
+
+        _retrying = SetTimer(_hwnd, RetryTimerId, RetryIntervalMs, IntPtr.Zero) != 0;
+    }
+
+    private void StopRetry()
+    {
+        if (!_retrying)
+            return;
+
+        _retrying = false;
+        _ = KillTimer(_hwnd, RetryTimerId);
     }
 
     private NotifyIconData CreateData(uint flags) => new()
@@ -305,8 +357,21 @@ public sealed unsafe class NotifyIcon : IDisposable
 
         if (message == TaskbarCreatedMessage && TaskbarCreatedMessage != 0)
         {
+            // Explorer restarted, or the display scale changed: the icon is gone and may need a
+            // different size. Subscribers redraw it (which adds it); otherwise add the old one.
             _added = false;
-            Apply(NimAdd);
+            ThemeChanged?.Invoke(this, EventArgs.Empty);
+            if (!_added)
+                Apply(NimAdd);
+            return IntPtr.Zero;
+        }
+
+        if (message == WmTimer && (nuint)wParam == RetryTimerId)
+        {
+            if (_added)
+                StopRetry();
+            else
+                Apply(NimAdd);
             return IntPtr.Zero;
         }
 
@@ -330,7 +395,7 @@ public sealed unsafe class NotifyIcon : IDisposable
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             // Never let an exception cross the native boundary.
-            System.Diagnostics.Debug.WriteLine(exception);
+            BluetoothHandsFreeToggle.App.CrashLog.Write($"Tray message 0x{message:X4} failed", exception);
         }
 
         return DefWindowProcW(hwnd, message, wParam, lParam);
@@ -512,4 +577,18 @@ public sealed unsafe class NotifyIcon : IDisposable
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    private static extern nuint SetTimer(IntPtr hwnd, nuint id, uint elapse, IntPtr timerProc);
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool KillTimer(IntPtr hwnd, nuint id);
+
+    [DllImport("user32.dll")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool ChangeWindowMessageFilterEx(IntPtr hwnd, uint message, uint action, IntPtr changeFilterStruct);
 }
