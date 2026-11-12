@@ -91,6 +91,12 @@ public enum HostTerminationOutcome
     /// <summary>The process is not %SystemRoot%\System32\svchost.exe, so it was left alone.</summary>
     UnexpectedHost,
 
+    /// <summary>
+    /// A hosted service is configured to reboot Windows or run a program when it crashes;
+    /// terminating the process would trigger that, so it was left alone.
+    /// </summary>
+    UnsafeRecoveryAction,
+
     Failed
 }
 
@@ -107,6 +113,9 @@ public sealed record HostTerminationResult(
 
     public static HostTerminationResult UnexpectedHost(string detail)
         => new(HostTerminationOutcome.UnexpectedHost, [], detail);
+
+    public static HostTerminationResult UnsafeRecoveryAction(IReadOnlyList<string> services)
+        => new(HostTerminationOutcome.UnsafeRecoveryAction, services, null);
 
     public static HostTerminationResult Failed(string error)
         => new(HostTerminationOutcome.Failed, [], error);

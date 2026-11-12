@@ -98,6 +98,7 @@
   "service.recovered": "{0}: the service stopped responding; its isolated process (PID {1}) was terminated to recover it.",
   "service.hungSharedHost": "{0}: the service stopped responding. Its process (PID {1}) also hosts other Windows services ({2}), so it was not terminated.",
   "service.hungUnexpectedHost": "{0}: the service stopped responding. Its process (PID {1}) is not the standard Windows service host, so it was not terminated.",
+  "service.hungUnsafeRecovery": "{0}: the service stopped responding. Windows is set to restart the computer or run a program when {2} crashes, so its process (PID {1}) was not terminated.",
   "service.hungTerminateFailed": "{0}: the service stopped responding, and its process (PID {1}) could not be terminated: {2}",
   "service.hungAgain": "{0}: the service stopped responding again after its process was terminated.",
   "service.exitedDuringStart": "{0}: the service stopped right after starting (Win32 exit code {1}, service exit code {2}).",

@@ -112,7 +112,26 @@ internal static class ServiceHostTerminator
         if (!hosted.Contains(serviceName, StringComparer.OrdinalIgnoreCase))
             return HostTerminationResult.StateChanged;
 
-        return null;
+        // 3. Terminating the process triggers the SCM recovery actions of every hosted service.
+        //    Restart is expected and handled; Reboot or RunCommand must never be triggered.
+        var unsafeServices = new List<string>();
+        foreach (var name in hosted.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!NativeServiceApi.TryGetFailureActions(name, out var actions, out var actionsError))
+                return HostTerminationResult.Failed(actionsError ?? name);
+
+            if (actions.Any(action => action is
+                    ServiceRecoveryAction.Reboot or
+                    ServiceRecoveryAction.RunCommand or
+                    ServiceRecoveryAction.Unknown))
+            {
+                unsafeServices.Add(name);
+            }
+        }
+
+        return unsafeServices.Count > 0
+            ? HostTerminationResult.UnsafeRecoveryAction(unsafeServices)
+            : null;
     }
 
     [DllImport("kernel32.dll", SetLastError = true)]

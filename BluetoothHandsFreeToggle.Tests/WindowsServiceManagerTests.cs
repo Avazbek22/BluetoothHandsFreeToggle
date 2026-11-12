@@ -83,6 +83,28 @@ public sealed class WindowsServiceManagerTests
     }
 
     [Fact]
+    public void FailureActionsDetectRebootConfiguredForCriticalService()
+    {
+        // RpcSs is configured by Windows to reboot the computer when it crashes.
+        var read = NativeServiceApi.TryGetFailureActions("RpcSs", out var actions, out var error);
+
+        Assert.True(read, error);
+        Assert.Contains(ServiceRecoveryAction.Reboot, actions);
+    }
+
+    [Fact]
+    public void HostTerminationPrecheckRefusesRunningServiceWithoutOpeningItsProcess()
+    {
+        var manager = new WindowsServiceManager();
+        var status = manager.QueryStatus("RpcSs").Status!;
+
+        var result = manager.TerminateHungServiceHost("RpcSs", status.ProcessId, ["RpcSs"]);
+
+        Assert.Equal(HostTerminationOutcome.StateChanged, result.Outcome);
+        Assert.Equal(ServiceRunState.Running, manager.QueryStatus("RpcSs").Status!.RunState);
+    }
+
+    [Fact]
     public void UnsupportedStartupTypeIsRejectedBeforeCallingWindows()
     {
         var manager = new WindowsServiceManager();

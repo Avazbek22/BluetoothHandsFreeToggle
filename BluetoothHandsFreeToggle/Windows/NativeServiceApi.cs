@@ -433,6 +433,92 @@ internal static class NativeServiceApi
         }
     }
 
+    // ===== Failure (recovery) actions =====
+
+    private const int ServiceConfigFailureActions = 2;
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode, EntryPoint = "QueryServiceConfig2W")]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryServiceConfig2(
+        IntPtr service,
+        int infoLevel,
+        IntPtr buffer,
+        int bufferSize,
+        out int bytesNeeded);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ServiceFailureActionsData
+    {
+        public int ResetPeriod;
+        public IntPtr RebootMessage;
+        public IntPtr Command;
+        public int ActionCount;
+        public IntPtr Actions;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ScAction
+    {
+        public int Type;
+        public int Delay;
+    }
+
+    /// <summary>
+    /// Reads the actions the SCM performs when the service's process terminates unexpectedly.
+    /// Terminating a host process triggers them, so a Reboot or RunCommand action must veto it.
+    /// </summary>
+    public static bool TryGetFailureActions(
+        string serviceName,
+        out List<ServiceRecoveryAction> actions,
+        out string? error)
+    {
+        var result = new List<ServiceRecoveryAction>();
+        var success = WithService(
+            serviceName,
+            ServiceQueryConfig,
+            "QueryServiceConfig2(FAILURE_ACTIONS)",
+            service =>
+            {
+                _ = QueryServiceConfig2(service, ServiceConfigFailureActions, IntPtr.Zero, 0, out var needed);
+                if (needed <= 0)
+                    return Marshal.GetLastWin32Error();
+
+                var buffer = Marshal.AllocHGlobal(needed);
+                try
+                {
+                    if (!QueryServiceConfig2(service, ServiceConfigFailureActions, buffer, needed, out _))
+                        return Marshal.GetLastWin32Error();
+
+                    var data = Marshal.PtrToStructure<ServiceFailureActionsData>(buffer);
+                    var size = Marshal.SizeOf<ScAction>();
+                    for (var index = 0; index < data.ActionCount && data.Actions != IntPtr.Zero; index++)
+                    {
+                        var action = Marshal.PtrToStructure<ScAction>(IntPtr.Add(data.Actions, index * size));
+                        result.Add(action.Type switch
+                        {
+                            0 => ServiceRecoveryAction.None,
+                            1 => ServiceRecoveryAction.Restart,
+                            2 => ServiceRecoveryAction.Reboot,
+                            3 => ServiceRecoveryAction.RunCommand,
+                            _ => ServiceRecoveryAction.Unknown
+                        });
+                    }
+
+                    return 0;
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+            },
+            out _,
+            out error);
+
+        actions = result;
+        return success;
+    }
+
     private static ServiceStatus ToStatus(ServiceStatusProcess native)
         => new(
             MapRunState(native.CurrentState),
@@ -514,4 +600,13 @@ internal static class NativeServiceApi
             operation,
             errorCode,
             new System.ComponentModel.Win32Exception(errorCode).Message);
+}
+
+internal enum ServiceRecoveryAction
+{
+    None,
+    Restart,
+    Reboot,
+    RunCommand,
+    Unknown
 }

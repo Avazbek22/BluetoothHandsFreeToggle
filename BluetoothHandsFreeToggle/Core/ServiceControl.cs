@@ -284,6 +284,13 @@ public sealed class ServiceControl
                     target.FriendlyName,
                     processId));
 
+            case HostTerminationOutcome.UnsafeRecoveryAction:
+                return session.RequireReboot(Text.Format(
+                    "service.hungUnsafeRecovery",
+                    target.FriendlyName,
+                    processId,
+                    string.Join(", ", termination.OtherServices)));
+
             default:
                 return session.RequireReboot(Text.Format(
                     "service.hungTerminateFailed",

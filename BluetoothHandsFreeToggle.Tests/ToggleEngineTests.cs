@@ -667,6 +667,21 @@ public sealed class ToggleEngineTests
         Assert.Empty(services.Calls);
     }
 
+    [Fact]
+    public void HostWithRebootRecoveryActionIsNeverTerminated()
+    {
+        var services = FakeServiceManager.WithBtag(ServiceRunState.Running, ServiceStartType.Manual);
+        services.HangOnStop = true;
+        services.TerminationOverride = HostTerminationResult.UnsafeRecoveryAction(["BTAGService"]);
+        var engine = CreateEngine(services, new MemoryBackupStore());
+
+        var report = engine.SoftResetHandsFree();
+
+        Assert.True(report.RebootRequired);
+        Assert.Equal(0, services.ProcessesTerminated);
+        Assert.Contains(report.Lines, line => line.Contains("restart the computer or run a program", StringComparison.Ordinal));
+    }
+
     private static ToggleEngine CreateEngine(
         IServiceManager services,
         IBackupStore backup,
