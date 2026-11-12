@@ -21,13 +21,21 @@ public sealed partial class FlyoutWindow : Window
     public const double PanelWidth = 360;
     public const double PanelHeight = 760;
     private const double ShadowMargin = 20;
-    private const double ScreenGap = 12;
 
     private static readonly Easing EnterEasing = new SplineEasing(0.1, 0.9, 0.2, 1);
+
+    /// <summary>
+    /// Animations follow the render loop. If it stalls (locked screen, a hung GPU driver), an
+    /// animation is cut short after its duration plus this grace and the end state is applied, so
+    /// the panel never stays half hidden or invisible.
+    /// </summary>
+    private static readonly TimeSpan AnimationGrace = TimeSpan.FromMilliseconds(200);
 
     private FlyoutViewModel? _viewModel;
     private bool _hiding;
     private int _showVersion;
+    private double _margin = ShadowMargin;
+    private PixelRect? _anchor;
 
     public FlyoutWindow()
     {
@@ -68,10 +76,34 @@ public sealed partial class FlyoutWindow : Window
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
+    /// <summary>True when the system gave no transparency and the panel is drawn as a plain window.</summary>
+    public bool IsOpaqueFallback { get; private set; }
+
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        NativeWindowStyle.MakeToolWindow(this);
+
+        // Without composition (some remote sessions, old drivers, software rendering) the shadow
+        // margin would show as a black frame: draw a plain rectangular panel instead.
+        var isNativeWindow = TryGetPlatformHandle()?.HandleDescriptor == "HWND";
+        if (isNativeWindow && ActualTransparencyLevel == WindowTransparencyLevel.None)
+            UseOpaqueFrame();
+
+        NativeWindowStyle.MakeToolWindow(this, rounded: IsOpaqueFallback);
+    }
+
+    private void UseOpaqueFrame()
+    {
+        IsOpaqueFallback = true;
+        _margin = 0;
+        Card.Margin = default;
+        Card.BoxShadow = default;
+        Card.CornerRadius = default;
+        Background = Card.Background;
+        if (Card.Child is Border clip)
+            clip.CornerRadius = default;
+        if (IsVisible)
+            PlaceNear(_anchor);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -112,7 +144,16 @@ public sealed partial class FlyoutWindow : Window
         _hiding = true;
         var version = ++_showVersion;
         LastHiddenUtc = DateTime.UtcNow;
-        await AnimateCardAsync(Card.Opacity, 0, 0, 12, 140, new CubicEaseIn(), version);
+
+        try
+        {
+            await AnimateCardAsync(Card.Opacity, 0, 0, 12, 140, new CubicEaseIn(), version);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // The animation is decoration: hide the panel anyway.
+            App.CrashLog.Write("The hide animation failed", exception);
+        }
 
         if (version != _showVersion)
             return;
@@ -160,9 +201,19 @@ public sealed partial class FlyoutWindow : Window
             }
         };
 
-        await animation.RunAsync(Card);
+        await RunGuardedAsync(animation, Card);
         if (version == _showVersion)
             Card.Opacity = toOpacity;
+    }
+
+    private static async Task RunGuardedAsync(Animation animation, Animatable target)
+    {
+        using var cancel = new CancellationTokenSource();
+        var run = animation.RunAsync(target, cancel.Token);
+        var guard = Task.Delay(animation.Duration + AnimationGrace);
+
+        if (await Task.WhenAny(run, guard) != run)
+            await cancel.CancelAsync();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -197,35 +248,32 @@ public sealed partial class FlyoutWindow : Window
                 }
             }
         };
-        _ = animation.RunAsync(page);
+        _ = RunGuardedAsync(animation, page);
     }
 
     private void PlaceNear(PixelRect? anchor)
     {
+        _anchor = anchor;
         var screen = anchor is { } rect
             ? Screens.ScreenFromPoint(rect.Center) ?? Screens.Primary
             : Screens.Primary;
         if (screen is null)
             return;
 
-        var scaling = screen.Scaling;
-        var area = screen.WorkingArea;
-        var bounds = screen.Bounds;
+        var placement = FlyoutPlacement.Compute(
+            screen.Bounds,
+            screen.WorkingArea,
+            screen.Scaling,
+            PanelWidth,
+            PanelHeight,
+            _margin);
 
-        var panelHeight = Math.Min(PanelHeight, (area.Height / scaling) - (2 * ScreenGap));
-        Width = PanelWidth + (2 * ShadowMargin);
-        Height = panelHeight + (2 * ShadowMargin);
-
-        var right = (int)Math.Round((ScreenGap + PanelWidth + ShadowMargin) * scaling);
-        var down = (int)Math.Round((ScreenGap + panelHeight + ShadowMargin) * scaling);
-        var inset = (int)Math.Round((ScreenGap - ShadowMargin) * scaling);
-
-        var taskbarOnLeft = area.X > bounds.X;
-        var taskbarOnTop = area.Y > bounds.Y && area.Bottom >= bounds.Bottom;
-
-        var x = taskbarOnLeft ? area.X + inset : area.Right - right;
-        var y = taskbarOnTop ? area.Y + inset : area.Bottom - down;
-        Position = new PixelPoint(x, y);
+        // Moving first lets a change of display scale apply before the size (in DIPs) is set,
+        // then the final position is set again for the new size.
+        Position = placement.Position;
+        Width = placement.Width;
+        Height = placement.Height;
+        Position = placement.Position;
     }
 
     private static class NativeWindowStyle
@@ -236,8 +284,13 @@ public sealed partial class FlyoutWindow : Window
         private const int DwmwaWindowCornerPreference = 33;
         private const int DwmwcpDoNotRound = 1;
 
-        /// <summary>Keeps the panel out of Alt+Tab and stops Windows 11 from rounding the transparent frame.</summary>
-        public static void MakeToolWindow(TopLevel window)
+        private const int DwmwcpRound = 2;
+
+        /// <summary>
+        /// Keeps the panel out of Alt+Tab. Windows 11 must not round the transparent frame, but
+        /// rounds the plain one like its own flyouts.
+        /// </summary>
+        public static void MakeToolWindow(TopLevel window, bool rounded)
         {
             if (!OperatingSystem.IsWindows() || window.TryGetPlatformHandle() is not { } handle)
                 return;
@@ -247,7 +300,7 @@ public sealed partial class FlyoutWindow : Window
             style = (style | WsExToolWindow) & ~WsExAppWindow;
             _ = SetWindowLongPtr(hwnd, GwlExStyle, new IntPtr(style));
 
-            var preference = DwmwcpDoNotRound;
+            var preference = rounded ? DwmwcpRound : DwmwcpDoNotRound;
             _ = DwmSetWindowAttribute(hwnd, DwmwaWindowCornerPreference, ref preference, sizeof(int));
         }
 
