@@ -21,7 +21,7 @@ internal static class BluetoothDeviceIndex
 
     // DEVPKEY_NAME: the name Windows shows for the devnode in Settings and Device Manager.
     private static readonly DevPropKey NameKey =
-        new(new Guid("B725F130-47EF-101A-A5F1-02608C9EBAC0"), 10);
+        new(new Guid("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 10);
 
     private const int CrSuccess = 0;
     private const int CrBufferSmall = 0x1A;
