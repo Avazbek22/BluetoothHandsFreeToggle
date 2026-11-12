@@ -235,6 +235,8 @@
   "gui.uacCancelled": "Cancelled: changing services needs administrator permission.",
   "gui.error.workerNotStarted": "Could not start the elevated helper.",
   "gui.error.workerNoAnswer": "The elevated helper did not report a result.",
+  "gui.error.startup.title": "HandsFree Toggle could not start",
+  "gui.error.startup.body": "The tray panel could not be shown: {0}\n\nThe console version still works: start the app with --console.\nDetails were saved to {1}",
   "gui.steps.title": "Progress",
   "gui.step.stop": "Stopping the service",
   "gui.step.stopNamed": "Stopping {0}",
