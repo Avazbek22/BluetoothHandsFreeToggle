@@ -44,6 +44,46 @@ public sealed record LiveStatus(
 
     public bool HasServices => Services.Any(service => service.Exists);
 
+    /// <summary>
+    /// True when <paramref name="other"/> would look exactly the same in the panel and the tray, so
+    /// a repeated check with no news can be skipped without touching the UI.
+    /// </summary>
+    public bool IsEquivalentTo(LiveStatus? other)
+    {
+        if (other is null)
+            return false;
+
+        if (ReferenceEquals(this, other))
+            return true;
+
+        return Phase == other.Phase &&
+               DeviceName == other.DeviceName &&
+               Error == other.Error &&
+               HungService?.ServiceName == other.HungService?.ServiceName &&
+               Services.SequenceEqual(other.Services) &&
+               SameMicrophone(Microphone, other.Microphone);
+    }
+
+    private static bool SameMicrophone(MicrophoneDiagnosis? left, MicrophoneDiagnosis? right)
+    {
+        if (left is null || right is null)
+            return left is null && right is null;
+
+        return left.Verdict == right.Verdict &&
+               left.Error == right.Error &&
+               left.Headsets.SequenceEqual(right.Headsets) &&
+               left.BluetoothMicrophones.SequenceEqual(right.BluetoothMicrophones) &&
+               SameApps(left.BluetoothApps, right.BluetoothApps) &&
+               SameApps(left.OtherApps, right.OtherApps);
+    }
+
+    // Process ids are left out on purpose: a browser tab restarting is not news for the panel.
+    private static bool SameApps(IReadOnlyList<MicrophoneApp> left, IReadOnlyList<MicrophoneApp> right)
+        => left.Count == right.Count &&
+           left.Zip(right).All(pair =>
+               pair.First.Name == pair.Second.Name &&
+               pair.First.DeviceNames.SequenceEqual(pair.Second.DeviceNames));
+
     /// <param name="services">The HFP services, as <see cref="ToggleEngine.GetServiceSnapshots"/> returns them.</param>
     /// <param name="microphone">The microphone diagnosis, or <c>null</c> when it is not available.</param>
     /// <param name="hungServiceNames">

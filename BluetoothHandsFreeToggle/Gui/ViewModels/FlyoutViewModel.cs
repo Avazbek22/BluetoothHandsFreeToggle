@@ -56,6 +56,9 @@ public sealed class FlyoutViewModel : ObservableObject
 {
     private static readonly TimeSpan NoticeDuration = TimeSpan.FromSeconds(6);
 
+    /// <summary>The same notification is not repeated sooner (an app opening and closing the microphone).</summary>
+    private static readonly TimeSpan RepeatNotificationAfter = TimeSpan.FromMinutes(1);
+
     private readonly IOperationRunner _runner;
     private readonly IAutostart _autostart;
     private readonly IGuiSettingsStore _settingsStore;
@@ -77,6 +80,7 @@ public sealed class FlyoutViewModel : ObservableObject
     private string? _notice;
     private long _noticeVersion;
     private bool _copied;
+    private (string Title, string Body, TimeSpan At)? _lastNotification;
     private Func<Task>? _primaryAction;
     private bool _autostartEnabled;
     private IReadOnlyList<LanguageOption> _languages = [];
@@ -304,6 +308,13 @@ public sealed class FlyoutViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(status);
 
+        // Most checks bring no news: leave the UI alone instead of re-binding every few seconds.
+        if (status.IsEquivalentTo(_status))
+        {
+            _status = status;
+            return;
+        }
+
         var previous = _status;
         _status = status;
         OnPropertyChanged(nameof(Status));
@@ -460,9 +471,34 @@ public sealed class FlyoutViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        await _shell.CopyTextAsync(text).ConfigureAwait(true);
+        try
+        {
+            await _shell.CopyTextAsync(text).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // The clipboard stayed locked by another app; the button simply does not confirm.
+            CrashLog.Write("Copying the report failed", exception);
+            return;
+        }
+
         _copied = true;
         OnPropertyChanged(nameof(CopyReportText));
+    }
+
+    private void Notify(string title, string body)
+    {
+        var now = _clock.Elapsed;
+        if (_lastNotification is { } last &&
+            last.Title == title &&
+            last.Body == body &&
+            now - last.At < RepeatNotificationAfter)
+        {
+            return;
+        }
+
+        _lastNotification = (title, body, now);
+        NotificationRequested?.Invoke(this, (title, body));
     }
 
     private void ShowNotice(string text)
@@ -508,17 +544,15 @@ public sealed class FlyoutViewModel : ObservableObject
         {
             if (_settings.NotifyCallMode)
             {
-                NotificationRequested?.Invoke(this, (
-                    Text.Get("gui.notify.call.title"),
+                Notify(Text.Get("gui.notify.call.title"),
                     _settings.NotifyMicrophone && apps.Count > 0
                         ? FormatApps("gui.notify.call.bodyApps", "gui.notify.call.bodyApps.many", apps)
-                        : Text.Get("gui.notify.call.body")));
+                        : Text.Get("gui.notify.call.body"));
             }
             else if (_settings.NotifyMicrophone && apps.Count > 0)
             {
-                NotificationRequested?.Invoke(this, (
-                    Text.Get("gui.notify.mic.title"),
-                    FormatApps("gui.notify.mic.body", "gui.notify.mic.body.many", apps)));
+                Notify(Text.Get("gui.notify.mic.title"),
+                    FormatApps("gui.notify.mic.body", "gui.notify.mic.body.many", apps));
             }
 
             return;
@@ -535,9 +569,8 @@ public sealed class FlyoutViewModel : ObservableObject
                 .ToList();
             if (added.Count > 0)
             {
-                NotificationRequested?.Invoke(this, (
-                    Text.Get("gui.notify.mic.title"),
-                    FormatApps("gui.notify.mic.body", "gui.notify.mic.body.many", added)));
+                Notify(Text.Get("gui.notify.mic.title"),
+                    FormatApps("gui.notify.mic.body", "gui.notify.mic.body.many", added));
             }
         }
     }
@@ -613,7 +646,14 @@ public sealed class FlyoutViewModel : ObservableObject
             _ => status.HardModeActive
         };
 
+        // Keep the same list objects when nothing changed, so the item views are not rebuilt.
+        var previousApps = MicApps;
+        var previousLines = InfoLines;
         BuildContext(status, view);
+        if (!ReferenceEquals(MicApps, previousApps) && MicApps.SequenceEqual(previousApps))
+            MicApps = previousApps;
+        if (!ReferenceEquals(InfoLines, previousLines) && InfoLines.SequenceEqual(previousLines))
+            InfoLines = previousLines;
         UpdateTray(status);
         OnAllPropertiesChanged();
     }
