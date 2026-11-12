@@ -35,6 +35,54 @@ public sealed class WindowsServiceManagerTests
     }
 
     [Fact]
+    public void QueryStatusReadsProcessIdOfRunningSystemService()
+    {
+        var manager = new WindowsServiceManager();
+
+        // RpcSs always runs and is readable without elevation; this validates the native struct layout.
+        var result = manager.QueryStatus("RpcSs");
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(ServiceRunState.Running, result.Status!.RunState);
+        Assert.True(result.Status.ProcessId > 0);
+    }
+
+    [Fact]
+    public void ServiceEnumerationFindsServicesHostedByProcess()
+    {
+        var status = new WindowsServiceManager().QueryStatus("RpcSs").Status!;
+
+        var found = NativeServiceApi.TryGetServicesInProcess(status.ProcessId, out var names, out var error);
+
+        Assert.True(found, error);
+        Assert.Contains(names, name => name.Equals("RpcSs", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void QueryStatusOfMissingServiceFails()
+    {
+        var manager = new WindowsServiceManager();
+
+        var result = manager.QueryStatus($"BluetoothHandsFreeToggle.Tests.{Guid.NewGuid():N}");
+
+        Assert.False(result.Success);
+        Assert.False(string.IsNullOrWhiteSpace(result.Error));
+    }
+
+    [Fact]
+    public void HostTerminationRefusesOwnProcessBeforeOpeningIt()
+    {
+        var manager = new WindowsServiceManager();
+
+        var result = manager.TerminateHungServiceHost(
+            "BTAGService",
+            Environment.ProcessId,
+            ["BTAGService"]);
+
+        Assert.Equal(HostTerminationOutcome.UnexpectedHost, result.Outcome);
+    }
+
+    [Fact]
     public void UnsupportedStartupTypeIsRejectedBeforeCallingWindows()
     {
         var manager = new WindowsServiceManager();

@@ -192,7 +192,7 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
         ConsoleHelpers.Pause();
     }
 
-    private void RunAction(string actionName, Func<ToggleReport> action)
+    private void RunAction(string actionName, Func<IProgress<OperationEvent>, ToggleReport> action)
     {
         if (!appInfo.IsAdministrator)
         {
@@ -202,7 +202,18 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
             return;
         }
 
-        ShowReport(action());
+        // Live steps stay on screen above the final report, so nothing looks frozen.
+        ConsoleHelpers.TryClearScreen();
+        RenderHeader();
+        ConsoleHelpers.WithColor(ConsoleColor.White, () => Console.WriteLine(actionName));
+        Console.WriteLine();
+
+        var progress = new ConsoleProgress();
+        var report = action(progress);
+        progress.Complete();
+        Console.WriteLine();
+
+        ShowReport(report, clearScreen: false);
     }
 
     private bool ConfirmHardMode()
@@ -219,21 +230,17 @@ public sealed class MenuLoop(AppInfo appInfo, ToggleEngine engine)
         RenderHeader();
         ConsoleHelpers.WriteWarning(Text.Get("ui.hard.warningGlobal"));
         ConsoleHelpers.WriteWarning(Text.Get("ui.hard.warningMicrophone"));
-        Console.Write(Text.Get("ui.hard.confirm"));
 
-        var answer = Console.ReadLine()?.Trim();
-        return answer is not null &&
-               (answer.Equals("1", StringComparison.Ordinal) ||
-                answer.Equals("y", StringComparison.OrdinalIgnoreCase) ||
-                answer.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                answer.Equals("д", StringComparison.OrdinalIgnoreCase) ||
-                answer.Equals("да", StringComparison.OrdinalIgnoreCase));
+        return ConsoleHelpers.ConfirmWithEnter(Text.Get("ui.hard.confirmKeys"));
     }
 
-    private void ShowReport(ToggleReport report)
+    private void ShowReport(ToggleReport report, bool clearScreen = true)
     {
-        ConsoleHelpers.TryClearScreen();
-        RenderHeader();
+        if (clearScreen)
+        {
+            ConsoleHelpers.TryClearScreen();
+            RenderHeader();
+        }
 
         if (report.Success)
             ConsoleHelpers.WriteSuccess(report.Title);

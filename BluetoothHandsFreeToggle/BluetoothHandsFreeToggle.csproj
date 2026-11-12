@@ -27,14 +27,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.10" />
-    </ItemGroup>
-
-    <ItemGroup>
         <EmbeddedResource Include="Docs\*.txt">
             <WithCulture>false</WithCulture>
         </EmbeddedResource>
         <EmbeddedResource Include="Localization\Resources\*.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="BluetoothHandsFreeToggle.Tests" />
     </ItemGroup>
 
 </Project>
