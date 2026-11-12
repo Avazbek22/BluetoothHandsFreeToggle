@@ -80,6 +80,7 @@ Additional highlights:
 
 - Interactive menu for quick recovery.
 - Soft mode preserves headset microphone availability.
+- Microphone diagnostics name the apps that keep the headset in call mode (for example, "Discord is using the headset microphone") and warn when the headset is the default Windows microphone.
 - Hard mode prioritizes high-quality playback.
 - Restore returns the exact saved service startup and running state.
 - Final state verification after every operation.
@@ -114,8 +115,8 @@ Hard mode is designed for this setup. It disables Bluetooth Classic HFP system-w
 
 | Mode | What it does | Headset microphone | Best used when |
 |:---|:---|:---:|:---|
-| **Status** | Reads supported HFP services and backup state without changing anything. | Available | You want to inspect the current state or diagnose a problem. |
-| **Soft reset** | Restarts only active HFP services without changing their startup type. | Preserved | A game or voice app released the microphone, but Windows stayed in call mode. |
+| **Status** | Reads supported HFP services and backup state, and shows which apps are using the headset microphone, without changing anything. | Available | You want to inspect the current state or diagnose a problem. |
+| **Soft reset** | Restarts only active HFP services without changing their startup type, and recovers an HFP service stuck in the Stopping state. | Preserved | A game or voice app released the microphone, but Windows stayed in call mode. |
 | **Hard mode** | Stops and disables Bluetooth Classic HFP system-wide after saving the original state. | Disabled | You need reliable stereo playback now and can use another microphone—or no microphone. |
 | **Restore** | Exactly restores the startup and Running/Stopped state saved by Hard mode. Without a backup, it uses `Manual + Running` recovery defaults. | Previous state | You want to leave Hard mode and return to the prior configuration. |
 
@@ -130,7 +131,7 @@ On Windows 11, A2DP and HFP are exposed through unified audio endpoints, and Win
 2. Close Call of Duty, Warzone, Discord, browsers, OBS, recording tools, and other applications that may be using the headset microphone.
 3. Run the executable. Interactive mode requests Administrator access once; canceling UAC leaves status-only functionality available.
 4. Start with **`[2] Soft reset`**.
-5. If Windows immediately returns to low-quality audio, confirm that no application is still using the headset microphone.
+5. If Windows immediately returns to low-quality audio, check the report: it names every app that is still using the headset microphone.
 6. Use **`[3] Hard mode`** when you want to prioritize playback quality completely.
 7. Use **`[4] Restore`** to leave Hard mode and return the previous HFP service state.
 
@@ -187,7 +188,7 @@ On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI languag
 
 ### Audio becomes bad again immediately
 
-An application is probably still opening the HFP microphone. Check:
+An application is probably still opening the HFP microphone. **Status** and **Soft reset** name every app that is recording from the headset microphone right now. Also check:
 
 - In-game voice chat and microphone settings.
 - Discord, Steam Chat, Teams, or another communication app.
@@ -221,6 +222,22 @@ Recovery behavior is intentionally conservative:
 - A fully successful and verified Restore removes the backup.
 - A system-wide named mutex prevents concurrent operations in different Windows sessions from racing over services or backup state.
 - Every operation reads the final Windows service state and reports partial failures.
+- Live progress is shown while services stop and start, so a slow operation never looks frozen.
+- Hard mode disables HFP startup **before** stopping the service, so device triggers or SCM recovery actions cannot restart it midway.
+
+### Hung service recovery
+
+Windows sometimes leaves an HFP service hung in the *Stopping* state. The Service Control Manager then rejects every further start or stop request until the service's process exits, which normally means a reboot. BluetoothHandsFreeToggle detects this case and resolves it safely:
+
+- Transitions are tracked with the service's own checkpoint and wait hint, the way the SCM protocol intends. A slow service that keeps reporting progress is never treated as hung.
+- A service is considered hung only after it stops reporting progress for its declared wait hint (clamped to 5–15 seconds).
+- The host process is terminated only if **all** of these hold, re-verified while a handle to the process is held so its PID cannot be reused in between:
+  - the service is still pending in exactly that process;
+  - the process hosts nothing but `BTAGService` / `BthHFSrv`;
+  - the process image is `%SystemRoot%\System32\svchost.exe`.
+- A shared service host (common on PCs with less than 3.5 GB RAM), an unexpected host, or a failed termination is never forced. The tool explains why and asks for a Windows restart instead. Hard mode's Disabled startup still takes effect after that restart.
+- A service is force-recovered at most once per step. If it hangs again, the tool stops and asks for a restart instead of looping.
+- Restore keeps its backup until the restored state is fully verified, including after a required restart.
 
 The tool uses the Windows Service Control Manager API. It does **not**:
 
@@ -229,6 +246,7 @@ The tool uses the Windows Service Control Manager API. It does **not**:
 - Modify headset firmware.
 - Directly edit service startup values in the registry.
 - Disable core Bluetooth services such as `bthserv` or `BluetoothUserService`.
+- Terminate any process other than an isolated `svchost.exe` that hosts only a hung HFP service.
 
 ## Supported Windows components
 

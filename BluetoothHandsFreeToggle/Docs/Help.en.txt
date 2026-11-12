@@ -1,9 +1,11 @@
 BluetoothHandsFreeToggle restores normal stereo playback when Windows leaves a Bluetooth Classic headset in low-quality HFP call mode.
 
 Modes:
- - Get status: reads the supported HFP services and backup state. No changes are made.
+ - Get status: reads the supported HFP services and backup state, and shows which apps are
+   using the Bluetooth headset microphone right now. No changes are made.
  - Soft reset: restarts only active HFP services without changing their startup type.
-   Use it when call mode remained active after an app stopped using the microphone.
+   Use it when call mode remained active after an app stopped using the microphone,
+   or when an HFP service is stuck in the Stopping state.
  - Hard mode: stops and disables HFP system-wide to force high-quality A2DP playback.
    The Bluetooth headset microphone remains unavailable while Hard mode is active.
  - Restore: exactly returns the startup and Running/Stopped state saved by Hard mode.
@@ -21,10 +23,17 @@ Safety:
  - Hard mode creates a backup before changing service configuration.
  - Repeated Hard mode runs preserve the first original-state backup.
  - Restore keeps the backup if any part of recovery fails.
+ - A hung HFP service is recovered automatically: its process is terminated only if it hosts
+   nothing but HFP services. Otherwise the app asks you to restart Windows.
  - Hard mode affects all Bluetooth Classic headsets on this Windows installation.
 
 Troubleshooting:
- - Close games, browsers, voice chat and recording apps before Soft reset.
+ - Status and Soft reset name the apps that are using the headset microphone. While any of them
+   records from it, Windows keeps the headset in call mode: close them or choose another
+   microphone in their settings.
+ - If the headset is the default microphone in Windows, apps set to the default input device
+   switch it to call mode as soon as they start recording. Choose another default microphone
+   in Windows Sound settings.
  - If Soft reset does not restore stereo quality, use Hard mode.
  - If Hard mode disabled the headset microphone, use Restore to return the previous state.
  - Reconnect the headset or restart audio playback after an operation if an app cached the previous audio route.
