@@ -1,16 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using StereoKeeper.App;
 
 namespace StereoKeeper.Localization;
 
-public sealed class FileLanguagePreferenceStore(string? settingsFilePath = null, string? legacySettingsFilePath = null)
+public sealed partial class FileLanguagePreferenceStore(string? settingsFilePath = null, string? legacySettingsFilePath = null)
     : ILanguagePreferenceStore
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        WriteIndented = true
-    };
-
     private readonly string _settingsFilePath = string.IsNullOrWhiteSpace(settingsFilePath)
         ? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -36,8 +32,9 @@ public sealed class FileLanguagePreferenceStore(string? settingsFilePath = null,
             if (!File.Exists(path))
                 return null;
 
-            var settings = JsonSerializer.Deserialize<LanguageSettings>(
-                File.ReadAllText(path));
+            var settings = JsonSerializer.Deserialize(
+                File.ReadAllText(path),
+                LanguageSettingsJsonContext.Default.LanguageSettings);
 
             return AppLanguageCode.TryParse(settings?.Language, out var language)
                 ? language
@@ -62,7 +59,7 @@ public sealed class FileLanguagePreferenceStore(string? settingsFilePath = null,
             Directory.CreateDirectory(directoryPath);
 
             var settings = new LanguageSettings(AppLanguageCode.ToCode(language));
-            var json = JsonSerializer.Serialize(settings, SerializerOptions);
+            var json = JsonSerializer.Serialize(settings, LanguageSettingsJsonContext.Default.LanguageSettings);
 
             temporaryPath = Path.Combine(
                 directoryPath,
@@ -93,4 +90,8 @@ public sealed class FileLanguagePreferenceStore(string? settingsFilePath = null,
     }
 
     private sealed record LanguageSettings(string Language);
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(LanguageSettings))]
+    private sealed partial class LanguageSettingsJsonContext : JsonSerializerContext;
 }
