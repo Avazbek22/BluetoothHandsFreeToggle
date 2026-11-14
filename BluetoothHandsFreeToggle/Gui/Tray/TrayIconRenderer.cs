@@ -2,18 +2,20 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Media.Immutable;
 using BluetoothHandsFreeToggle.Gui.Controls;
-using Microsoft.Win32;
 
 namespace BluetoothHandsFreeToggle.Gui.Tray;
 
 /// <summary>
-/// Draws the tray icon at runtime: a headphones glyph in the taskbar's text colour with a small
-/// status dot cut into its lower right corner, rendered at the exact small-icon size for the DPI.
+/// Draws the tray icon at runtime: the app logo with a small status dot cut into its lower right
+/// corner, rendered at the exact small-icon size for the DPI from the logo frame made for that size.
 /// </summary>
 public static class TrayIconRenderer
 {
     private const int SmallIconMetric = 49; // SM_CXSMICON
+
+    private static readonly IBrush DotEdge = new ImmutableSolidColorBrush(Color.FromArgb(70, 0, 0, 0));
 
     public static int SmallIconSize
     {
@@ -31,76 +33,55 @@ public static class TrayIconRenderer
         }
     }
 
-    /// <summary>True when the taskbar uses the light theme (dark glyph needed).</summary>
-    public static bool TaskbarIsLight
-    {
-        get
-        {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-                return key?.GetValue("SystemUsesLightTheme") is int value && value != 0;
-            }
-            catch (Exception exception) when (exception is UnauthorizedAccessException or IOException or System.Security.SecurityException)
-            {
-                return false;
-            }
-        }
-    }
-
-    public static byte[] RenderPng(int size, Color glyph, Color? dot)
+    public static byte[] RenderPng(int size, Color? dot)
     {
         using var bitmap = new RenderTargetBitmap(new PixelSize(size, size), new Vector(96, 96));
         using (var context = bitmap.CreateDrawingContext())
         {
-            var scale = size / 24.0;
-            var pen = new Pen(new SolidColorBrush(glyph), 2.1, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-
+            var bounds = new Rect(0, 0, size, size);
             var dotRadius = size * 0.21;
             var dotCenter = new Point(size - dotRadius - (size * 0.02), size - dotRadius - (size * 0.02));
 
-            // Cut a gap around the dot so it stays readable on any taskbar colour.
+            // Cut a gap around the dot so it stays readable on the red logo and on any taskbar colour.
             var gap = dot is null ? 0 : dotRadius + Math.Max(1.0, size * 0.09);
             Geometry visible = dot is null
-                ? new RectangleGeometry(new Rect(0, 0, size, size))
+                ? new RectangleGeometry(bounds)
                 : new CombinedGeometry(
                     GeometryCombineMode.Exclude,
-                    new RectangleGeometry(new Rect(0, 0, size, size)),
+                    new RectangleGeometry(bounds),
                     new EllipseGeometry(new Rect(dotCenter.X - gap, dotCenter.Y - gap, gap * 2, gap * 2)));
 
             using (context.PushGeometryClip(visible))
-            using (context.PushTransform(Matrix.CreateScale(scale, scale)))
             {
-                context.DrawGeometry(null, pen, Icons.Headphones);
+                AppLogo.Draw(context, bounds, size);
             }
 
             if (dot is { } dotColor)
-                context.DrawEllipse(new SolidColorBrush(dotColor), null, dotCenter, dotRadius, dotRadius);
+            {
+                // A faint edge inside the dot keeps the light Hard mode dot visible on a light taskbar.
+                var edge = Math.Max(1.0, size / 16.0);
+                var radius = dotRadius - (edge / 2);
+                context.DrawEllipse(new SolidColorBrush(dotColor), new Pen(DotEdge, edge), dotCenter, radius, radius);
+            }
         }
 
-        using var stream = new MemoryStream();
-        bitmap.Save(stream, PngBitmapEncoderOptions.Default);
-        return stream.ToArray();
+        return Encode(bitmap);
     }
 
-    /// <summary>A larger, colourful version for notifications: the app's red tile with a white glyph.</summary>
+    /// <summary>A larger version for notifications: the logo alone.</summary>
     public static byte[] RenderNotificationPng(int size)
     {
         using var bitmap = new RenderTargetBitmap(new PixelSize(size, size), new Vector(96, 96));
         using (var context = bitmap.CreateDrawingContext())
         {
-            var radius = size * 0.22;
-            context.DrawRectangle(new SolidColorBrush(Palette.AccentButton), null, new Rect(0, 0, size, size), radius, radius);
-
-            var glyph = size * 0.6;
-            var offset = (size - glyph) / 2;
-            var pen = new Pen(Brushes.White, 2, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-            using (context.PushTransform(Matrix.CreateScale(glyph / 24, glyph / 24) * Matrix.CreateTranslation(offset, offset)))
-            {
-                context.DrawGeometry(null, pen, Icons.Headphones);
-            }
+            AppLogo.Draw(context, new Rect(0, 0, size, size), size);
         }
 
+        return Encode(bitmap);
+    }
+
+    private static byte[] Encode(RenderTargetBitmap bitmap)
+    {
         using var stream = new MemoryStream();
         bitmap.Save(stream, PngBitmapEncoderOptions.Default);
         return stream.ToArray();

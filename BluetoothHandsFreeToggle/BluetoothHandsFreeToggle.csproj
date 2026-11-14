@@ -40,6 +40,7 @@
             <WithCulture>false</WithCulture>
         </EmbeddedResource>
         <EmbeddedResource Include="Localization\Resources\*.json" />
+        <EmbeddedResource Include="Assets\AppIcon.ico" LogicalName="BluetoothHandsFreeToggle.AppIcon.ico" />
     </ItemGroup>
 
     <ItemGroup>

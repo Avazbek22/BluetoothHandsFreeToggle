@@ -253,11 +253,8 @@ public sealed class PanelRobustnessTests
     [InlineData(48)]
     public Task TrayIconsAreValidPngsOfTheRequestedSize(int size) => Ui.RunAsync(() =>
     {
-        foreach (var dot in new Color?[] { null, Palette.Green, Palette.Accent, Palette.Amber })
-        {
-            foreach (var glyph in new[] { Colors.White, Color.Parse("#1C1C1F") })
-                AssertPng(TrayIconRenderer.RenderPng(size, glyph, dot), size);
-        }
+        foreach (var dot in new Color?[] { null, Palette.Green, Palette.Accent, Palette.Amber, Palette.Light })
+            AssertPng(TrayIconRenderer.RenderPng(size, dot), size);
 
         AssertPng(TrayIconRenderer.RenderNotificationPng(size), size);
     });
@@ -265,11 +262,11 @@ public sealed class PanelRobustnessTests
     [Fact]
     public Task RenderingTheTrayIconRepeatedlyStaysCheap() => Ui.RunAsync(() =>
     {
-        _ = TrayIconRenderer.RenderPng(16, Colors.White, Palette.Green);
+        _ = TrayIconRenderer.RenderPng(16, Palette.Green);
         var stopwatch = Stopwatch.StartNew();
 
         for (var update = 0; update < 300; update++)
-            _ = TrayIconRenderer.RenderPng(16, Colors.White, update % 2 == 0 ? Palette.Green : Palette.Accent);
+            _ = TrayIconRenderer.RenderPng(16, update % 2 == 0 ? Palette.Green : Palette.Accent);
 
         Assert.True(stopwatch.ElapsedMilliseconds < 3000, $"300 icons took {stopwatch.ElapsedMilliseconds} ms");
     });

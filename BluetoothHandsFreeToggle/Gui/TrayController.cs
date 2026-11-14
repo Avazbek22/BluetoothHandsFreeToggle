@@ -172,9 +172,8 @@ public sealed class TrayController : IShell, IDisposable
         try
         {
             var size = TrayIconRenderer.SmallIconSize;
-            var glyph = TrayIconRenderer.TaskbarIsLight ? Color.Parse("#1C1C1F") : Colors.White;
             Color? dot = state.Dot is { } tone ? Palette.ToneColor(tone) : null;
-            _icon.Update(TrayIconRenderer.RenderPng(size, glyph, dot), size, state.Tooltip);
+            _icon.Update(TrayIconRenderer.RenderPng(size, dot), size, state.Tooltip);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {

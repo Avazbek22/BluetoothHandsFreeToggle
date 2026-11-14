@@ -12,9 +12,7 @@
 
                 <!-- Header -->
                 <Grid ColumnDefinitions="Auto,*,Auto" Height="36">
-                    <Border Width="30" Height="30" CornerRadius="8" Background="{StaticResource AccentSoftBrush}">
-                        <c:StrokeIcon Data="{x:Static c:Icons.Headphones}" Size="17" Foreground="{StaticResource AccentTextBrush}" />
-                    </Border>
+                    <c:AppLogoImage Name="HeaderLogo" Width="30" Height="30" />
                     <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
                                Text="{Binding L.AppTitle}" FontWeight="SemiBold" />
                     <Button Grid.Column="2" Name="SettingsButton" Theme="{StaticResource IconButton}"
