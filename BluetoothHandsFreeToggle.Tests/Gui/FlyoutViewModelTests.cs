@@ -515,7 +515,7 @@ public sealed class FlyoutViewModelTests
     public Task SettingsCopyTheDiagnosticsForTheDeveloper() => Ui.RunAsync(async () =>
     {
         var harness = new PanelHarness();
-        harness.Diagnostics.Report = "BluetoothHandsFreeToggle v2.2\nWindows: Windows 11 Pro";
+        harness.Diagnostics.Report = "BluetoothHandsFreeToggle v3.0\nWindows: Windows 11 Pro";
         var panel = harness.Create(Stereo());
         panel.ShowSettingsCommand.Execute(null);
 
@@ -524,7 +524,7 @@ public sealed class FlyoutViewModelTests
 
         await panel.CopyDiagnosticsAsync();
 
-        Assert.Equal("BluetoothHandsFreeToggle v2.2\nWindows: Windows 11 Pro", harness.Shell.Clipboard);
+        Assert.Equal("BluetoothHandsFreeToggle v3.0\nWindows: Windows 11 Pro", harness.Shell.Clipboard);
         Assert.Equal("Copied. Paste it into your message", panel.DiagnosticsText);
         Assert.True(panel.CopyDiagnosticsCommand.CanExecute(null));
 

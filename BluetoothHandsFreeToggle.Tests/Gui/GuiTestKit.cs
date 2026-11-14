@@ -173,7 +173,7 @@ internal sealed class FakeShell : IShell
 
 internal sealed class FakeDiagnostics : IDiagnosticsSource
 {
-    public string Report { get; set; } = "BluetoothHandsFreeToggle v2.2";
+    public string Report { get; set; } = "BluetoothHandsFreeToggle v3.0";
 
     public Exception? Failure { get; set; }
 
