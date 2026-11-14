@@ -1,3 +1,4 @@
+using System.Reflection;
 using BluetoothHandsFreeToggle.App;
 using Xunit;
 
@@ -24,7 +25,18 @@ public sealed class AppInfoTests
     [Fact]
     public void AppDisplayNameIncludesVersionTag()
     {
-        Assert.Equal("v2.2", AppInfo.AppVersionTag);
-        Assert.Equal("BluetoothHandsFreeToggle v2.2", AppInfo.AppDisplayName);
+        Assert.Equal("v3.0", AppInfo.AppVersionTag);
+        Assert.Equal("BluetoothHandsFreeToggle v3.0", AppInfo.AppDisplayName);
+    }
+
+    // The release script names the files after the project version, the panel shows this constant.
+    [Fact]
+    public void DisplayVersionMatchesTheProjectVersion()
+    {
+        var projectVersion = typeof(AppInfo).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        Assert.Equal(AppInfo.AppDisplayVersion, projectVersion);
     }
 }
