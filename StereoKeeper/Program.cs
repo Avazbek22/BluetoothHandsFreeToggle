@@ -22,8 +22,14 @@ internal static class Program
     }
 
     /// <summary>Used by the tray app, the XAML previewer and the headless UI tests.</summary>
+    /// <remarks>
+    /// The small panel is drawn on the CPU: a GPU context would keep graphics drivers loaded in the
+    /// background all day (about 60 MB more and 30 extra threads) and hold the GPU during games.
+    /// </remarks>
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<GuiApp>().UsePlatformDetect();
+        => AppBuilder.Configure<GuiApp>()
+            .UsePlatformDetect()
+            .With(new Win32PlatformOptions { RenderingMode = [Win32RenderingMode.Software] });
 
     private static int RunGui(string[] args, LaunchOptions options)
     {

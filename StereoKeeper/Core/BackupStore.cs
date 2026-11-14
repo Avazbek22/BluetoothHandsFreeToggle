@@ -14,12 +14,6 @@ public sealed class BackupStore : IBackupStore
     private const int CurrentSchemaVersion = 1;
     private const long MaximumBackupSize = 64 * 1024;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     private readonly bool _protectPath;
 
     public BackupStore()
@@ -84,7 +78,7 @@ public sealed class BackupStore : IBackupStore
             }
 
             var json = File.ReadAllText(BackupPath);
-            var backup = JsonSerializer.Deserialize<BackupFile>(json, JsonOptions);
+            var backup = JsonSerializer.Deserialize(json, BackupJsonContext.Default.BackupFile);
             if (backup is null)
                 return BackupLoadResult.Failed(Text.Get("backup.empty"));
 
@@ -141,7 +135,7 @@ public sealed class BackupStore : IBackupStore
                 StringComparer.OrdinalIgnoreCase);
 
             var backup = new BackupFile(CurrentSchemaVersion, DateTimeOffset.UtcNow, services);
-            var json = JsonSerializer.Serialize(backup, JsonOptions);
+            var json = JsonSerializer.Serialize(backup, BackupJsonContext.Default.BackupFile);
 
             temporaryPath = Path.Combine(directory, $".{FileName}.{Guid.NewGuid():N}.tmp");
             File.WriteAllText(temporaryPath, json);
@@ -238,3 +232,8 @@ public sealed class BackupStore : IBackupStore
     }
 
 }
+
+// Enum names as text, like the reflection serializer of 2.x wrote them.
+[JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true)]
+[JsonSerializable(typeof(BackupFile))]
+internal sealed partial class BackupJsonContext : JsonSerializerContext;

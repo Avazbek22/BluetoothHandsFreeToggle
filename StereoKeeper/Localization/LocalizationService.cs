@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace StereoKeeper.Localization;
 
@@ -77,8 +78,11 @@ public sealed class LocalizationService
                            ?? throw new InvalidOperationException(
                                $"Localization resource '{languageCode}.json' could not be opened.");
 
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)
+        return JsonSerializer.Deserialize(stream, LocalizationJsonContext.Default.DictionaryStringString)
                ?? throw new InvalidOperationException(
                    $"Localization resource '{languageCode}.json' is invalid.");
     }
 }
+
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal sealed partial class LocalizationJsonContext : JsonSerializerContext;

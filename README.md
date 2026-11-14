@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="StereoKeeper/Assets/AppIcon.png" width="168" alt="StereoKeeper logo: headphones that stay in stereo on Windows">
+  <img src="StereoKeeper/Assets/AppIcon.png" width="168" alt="StereoKeeper Windows Bluetooth audio fix logo">
 </p>
 
 <h1 align="center">StereoKeeper</h1>
@@ -85,7 +85,7 @@ Every action shows what Windows is doing right now, settings are one click away,
 
 | 🎮 Game-friendly | 🛡️ Recoverable | ⚡ Fast |
 |:---|:---|:---|
-| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe`; no installer, no background service, and no separate .NET runtime. |
+| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe` of about 21 MB; no installer, no background service, and no separate .NET runtime. |
 
 Additional highlights:
 
@@ -100,6 +100,7 @@ Additional highlights:
 - If the panel ever cannot start, Windows shows a message instead, and with Always stereo on it offers to put Windows back first.
 - 30-language interface with smart Windows language detection and a saved manual choice.
 - Built-in help and safe handling of partial failures.
+- Light in the background: about 25 MB of memory, near-zero CPU, and no GPU use, so games keep the whole graphics card.
 
 ## Typical use cases
 
@@ -369,14 +370,7 @@ Create verified release artifacts for `win-x64` and `win-arm64`:
 ```
 
 The release script requires a clean `master` branch synchronized with `origin/master`,
-runs all tests, publishes both architectures, and generates SHA-256 checksums. Release
-notes live in `docs/release-notes/v<version>.md`; the script stops if they are missing.
-To also create the tag and the GitHub release with the files and those notes (GitHub CLI
-signed in), add `-CreateGitHubRelease`, and `-Draft` to review it before publishing:
-
-```powershell
-.\scripts\Publish-Release.ps1 -CreateGitHubRelease -Draft
-``` For a
+runs all tests, publishes both architectures, and generates SHA-256 checksums. For a
 local packaging test from another branch or a dirty working tree:
 
 ```powershell
@@ -417,6 +411,12 @@ Bug reports, reproducible Windows/Bluetooth edge cases, and focused pull request
 
 - [Open an issue](https://github.com/Avazbek22/StereoKeeper/issues/new)
 - [View the source](https://github.com/Avazbek22/StereoKeeper)
+
+## Trademarks
+
+The Bluetooth® word mark and logos are registered trademarks owned by Bluetooth SIG, Inc. StereoKeeper is an independent open-source project: it is not affiliated with, endorsed by, or sponsored by Bluetooth SIG, and it claims no rights to these trademarks. The Bluetooth logo in the app icon only shows that the app works with Bluetooth headphones.
+
+Windows is a trademark of the Microsoft group of companies. Other product and company names mentioned here, such as Discord, Microsoft Teams, and Google Chrome, belong to their respective owners and are used only to describe compatibility.
 
 ## License
 
