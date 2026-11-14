@@ -31,9 +31,9 @@ public enum OperationStep
 
 /// <summary>
 /// Live feedback emitted while an operation runs. Reports are delivered synchronously on the
-/// operation thread; a GUI must marshal them to its UI thread itself.
+/// operation thread; the panel marshals them to its UI thread itself.
 /// </summary>
-/// <param name="Message">The full localized message, as the console shows it.</param>
+/// <param name="Message">The full localized message, as the report shows it.</param>
 /// <param name="Step">The structured step behind <paramref name="Message"/>.</param>
 /// <param name="Service">The friendly name of the service the step applies to.</param>
 public sealed record OperationEvent(

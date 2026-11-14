@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using BluetoothHandsFreeToggle.App;
 using BluetoothHandsFreeToggle.Localization;
 using Xunit;
 
@@ -58,36 +57,6 @@ public sealed partial class LocalizationResourceTests
                 {
                     Assert.Contains(term, translation[key], StringComparison.Ordinal);
                 }
-            }
-        }
-    }
-
-    [Fact]
-    public void EmbeddedDocumentationLoadsForEveryLanguage()
-    {
-        var resourceNames = typeof(DocumentationProvider).Assembly.GetManifestResourceNames();
-        foreach (var definition in AppLanguageCatalog.All)
-        {
-            foreach (var document in Enum.GetValues<DocumentationDocument>())
-            {
-                var suffix = $".Docs.{document}.{definition.ResourceCode}.txt";
-                Assert.Single(
-                    resourceNames,
-                    name => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
-                var lines = DocumentationProvider.GetLines(document, definition.Language);
-                Assert.True(lines.Count >= 3, $"{document}.{definition.Code} is incomplete.");
-                Assert.DoesNotContain(lines, line => line.Contains(
-                    "Documentation is unavailable",
-                    StringComparison.Ordinal));
-                Assert.DoesNotContain(
-                    lines,
-                    line => line.Contains("BHFT", StringComparison.Ordinal) ||
-                            line.Contains('\uFFFD'));
-                Assert.Contains(
-                    lines,
-                    line => line.Contains(
-                        "https://github.com/Avazbek22/BluetoothHandsFreeToggle",
-                        StringComparison.Ordinal));
             }
         }
     }

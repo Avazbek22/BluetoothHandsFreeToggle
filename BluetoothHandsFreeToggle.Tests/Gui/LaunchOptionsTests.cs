@@ -24,8 +24,8 @@ public sealed class LaunchOptionsTests
     }
 
     [Fact]
-    public void ConsoleArgumentOpensTheClassicMenu()
-        => Assert.Equal(LaunchMode.Console, LaunchOptions.Parse(["--console"]).Mode);
+    public void UnknownArgumentsStillOpenTheTrayApp()
+        => Assert.Equal(LaunchMode.Gui, LaunchOptions.Parse(["--something-else"]).Mode);
 
     [Theory]
     [InlineData(OperationKind.Soft)]
@@ -45,7 +45,7 @@ public sealed class LaunchOptionsTests
 
     [Fact]
     public void WorkerWinsOverOtherModes()
-        => Assert.Equal(LaunchMode.ElevatedWorker, LaunchOptions.Parse(["--console", "--elevated-worker", "soft"]).Mode);
+        => Assert.Equal(LaunchMode.ElevatedWorker, LaunchOptions.Parse(["--tray", "--elevated-worker", "soft"]).Mode);
 
     [Fact]
     public void UnknownOrMissingWorkerOperationIsRejected()

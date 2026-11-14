@@ -5,9 +5,6 @@ public enum LaunchMode
     /// <summary>The tray app with its flyout (default).</summary>
     Gui,
 
-    /// <summary>The classic interactive console menu.</summary>
-    Console,
-
     /// <summary>A short-lived elevated process that runs one operation for the tray app.</summary>
     ElevatedWorker
 }
@@ -27,7 +24,6 @@ public sealed record LaunchOptions(
     string? LanguageCode = null)
 {
     public const string TrayArgument = "--tray";
-    public const string ConsoleArgument = "--console";
     public const string WorkerArgument = "--elevated-worker";
     public const string PipeArgument = "--pipe";
     public const string LanguageArgument = "--lang";
@@ -44,9 +40,6 @@ public sealed record LaunchOptions(
                 PipeName: ValueAfter(args, PipeArgument),
                 LanguageCode: ValueAfter(args, LanguageArgument));
         }
-
-        if (args.Contains(ConsoleArgument, StringComparer.OrdinalIgnoreCase))
-            return new LaunchOptions(LaunchMode.Console);
 
         return new LaunchOptions(
             LaunchMode.Gui,

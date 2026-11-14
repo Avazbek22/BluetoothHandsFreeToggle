@@ -55,7 +55,6 @@ public sealed class UiText
         new(Text.Get("gui.help.safety.title"), Text.Get("gui.help.safety.body")),
         new(Text.Get("gui.help.details.title"), Text.Get("gui.help.details.body"), IsAside: true)
     ];
-    public string HelpConsole { get; } = Text.Get("gui.help.console");
 }
 
 /// <summary>A help card; an aside (technical details) is drawn quieter than the main answers.</summary>
