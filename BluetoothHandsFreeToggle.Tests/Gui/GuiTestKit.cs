@@ -171,6 +171,15 @@ internal sealed class FakeShell : IShell
     public void Quit() => QuitRequested = true;
 }
 
+internal sealed class FakeDiagnostics : IDiagnosticsSource
+{
+    public string Report { get; set; } = "BluetoothHandsFreeToggle v2.2";
+
+    public Exception? Failure { get; set; }
+
+    public string Collect() => Failure is null ? Report : throw Failure;
+}
+
 /// <summary>
 /// Plays a scripted operation: optionally passes UAC, reports the given progress, then waits for
 /// <see cref="Release"/> (when <see cref="HoldUntilReleased"/> is set) before returning the outcome.
@@ -220,10 +229,11 @@ internal sealed class PanelHarness
     public FakeAutostart Autostart { get; } = new();
     public MemorySettingsStore Settings { get; } = new();
     public FakeShell Shell { get; } = new();
+    public FakeDiagnostics Diagnostics { get; } = new();
 
     public FlyoutViewModel Create(LiveStatus? status = null)
     {
-        var viewModel = new FlyoutViewModel(Runner, Autostart, Settings, Shell);
+        var viewModel = new FlyoutViewModel(Runner, Autostart, Settings, Shell, Diagnostics);
         if (status is not null)
             viewModel.ApplyStatus(status);
         return viewModel;

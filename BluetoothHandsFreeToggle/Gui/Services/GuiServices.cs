@@ -67,9 +67,20 @@ public interface IShell
     void Quit();
 }
 
+/// <summary>Builds the text the user copies for the developer. Called on a background thread.</summary>
+public interface IDiagnosticsSource
+{
+    string Collect();
+}
+
 public sealed class EngineStatusSource(ToggleEngine engine) : IStatusSource
 {
     public IReadOnlyList<ServiceSnapshot> GetServices() => engine.GetServiceSnapshots();
 
     public MicrophoneDiagnosis? DiagnoseMicrophone() => engine.DiagnoseMicrophone();
+}
+
+public sealed class EngineDiagnosticsSource(ToggleEngine engine) : IDiagnosticsSource
+{
+    public string Collect() => DiagnosticsReport.Collect(engine);
 }

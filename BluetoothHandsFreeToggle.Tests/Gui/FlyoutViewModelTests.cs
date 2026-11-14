@@ -511,6 +511,51 @@ public sealed class FlyoutViewModelTests
         }
     });
 
+    [Fact]
+    public Task SettingsCopyTheDiagnosticsForTheDeveloper() => Ui.RunAsync(async () =>
+    {
+        var harness = new PanelHarness();
+        harness.Diagnostics.Report = "BluetoothHandsFreeToggle v2.2\nWindows: Windows 11 Pro";
+        var panel = harness.Create(Stereo());
+        panel.ShowSettingsCommand.Execute(null);
+
+        Assert.True(panel.CanCopyDiagnostics);
+        Assert.Equal("Copy info for the developer", panel.DiagnosticsText);
+
+        await panel.CopyDiagnosticsAsync();
+
+        Assert.Equal("BluetoothHandsFreeToggle v2.2\nWindows: Windows 11 Pro", harness.Shell.Clipboard);
+        Assert.Equal("Copied. Paste it into your message", panel.DiagnosticsText);
+        Assert.True(panel.CopyDiagnosticsCommand.CanExecute(null));
+
+        panel.BackCommand.Execute(null);
+
+        Assert.Equal("Copy info for the developer", panel.DiagnosticsText);
+    });
+
+    [Fact]
+    public Task DiagnosticsThatCannotBeCollectedAreNotConfirmed() => Ui.RunAsync(async () =>
+    {
+        var harness = new PanelHarness();
+        harness.Diagnostics.Failure = new IOException("access denied");
+        var panel = harness.Create(Stereo());
+
+        await panel.CopyDiagnosticsAsync();
+
+        Assert.Null(harness.Shell.Clipboard);
+        Assert.Equal("Copy info for the developer", panel.DiagnosticsText);
+        Assert.True(panel.CopyDiagnosticsCommand.CanExecute(null));
+    });
+
+    [Fact]
+    public Task WithoutADiagnosticsSourceTheRowIsHidden() => Ui.RunAsync(() =>
+    {
+        var panel = new FlyoutViewModel(new ThrowingRunner(), new FakeAutostart(), new MemorySettingsStore(), new FakeShell());
+
+        Assert.False(panel.CanCopyDiagnostics);
+        Assert.False(panel.CopyDiagnosticsCommand.CanExecute(null));
+    });
+
     private sealed class ThrowingRunner : IOperationRunner
     {
         public Task<OperationOutcome> RunAsync(

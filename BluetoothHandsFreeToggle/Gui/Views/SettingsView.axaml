@@ -118,6 +118,19 @@
                                                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
                             </Button>
+                            <Button Name="DiagnosticsButton" Theme="{StaticResource RowButton}"
+                                    Command="{Binding CopyDiagnosticsCommand}"
+                                    IsVisible="{Binding CanCopyDiagnostics}"
+                                    AutomationProperties.Name="{Binding L.Diagnostics}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,8">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Copy}" Size="16" StrokeThickness="1.9"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DiagnosticsText}" FontSize="14" TextWrapping="Wrap" />
+                                        <TextBlock Classes="caption" Text="{Binding L.DiagnosticsDescription}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
                             <Button Theme="{StaticResource RowButton}" Command="{Binding OpenSourceCommand}">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <c:StrokeIcon Data="{x:Static c:Icons.External}" Size="16" StrokeThickness="1.9"

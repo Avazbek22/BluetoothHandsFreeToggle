@@ -45,7 +45,7 @@ public sealed class TrayController : IShell, IDisposable
         var autostart = new RegistryAutostart(executablePath);
         autostart.RefreshPath();
 
-        _viewModel = new FlyoutViewModel(runner, autostart, new FileGuiSettingsStore(), this);
+        _viewModel = new FlyoutViewModel(runner, autostart, new FileGuiSettingsStore(), this, new EngineDiagnosticsSource(engine));
         _monitor = new StatusMonitor(new EngineStatusSource(engine), _viewModel.ApplyStatus);
         _window = new FlyoutWindow { DataContext = _viewModel };
         _window.PanelHidden += (_, _) =>

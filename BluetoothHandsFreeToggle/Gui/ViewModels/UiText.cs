@@ -40,6 +40,8 @@ public sealed class UiText
     public string NotifyMicDescription { get; } = Text.Get("gui.settings.notifyMicDesc");
     public string About { get; } = Text.Get("gui.settings.about");
     public string VersionLabel { get; } = Text.Get("gui.settings.version");
+    public string Diagnostics { get; } = Text.Get("gui.settings.diagnostics");
+    public string DiagnosticsDescription { get; } = Text.Get("gui.settings.diagnosticsDesc");
     public string SourceCode { get; } = Text.Get("gui.settings.source");
     public string SupportProject { get; } = Text.Get("gui.settings.support");
     public string Quit { get; } = Text.Get("gui.settings.quit");

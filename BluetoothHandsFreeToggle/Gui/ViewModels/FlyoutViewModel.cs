@@ -63,6 +63,7 @@ public sealed class FlyoutViewModel : ObservableObject
     private readonly IAutostart _autostart;
     private readonly IGuiSettingsStore _settingsStore;
     private readonly IShell _shell;
+    private readonly IDiagnosticsSource? _diagnostics;
     private readonly GuiSettings _settings;
     private readonly SynchronizationContext? _ui;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
@@ -79,6 +80,8 @@ public sealed class FlyoutViewModel : ObservableObject
     private string? _notice;
     private long _noticeVersion;
     private bool _copied;
+    private bool _collectingDiagnostics;
+    private bool _diagnosticsCopied;
     private (string Title, string Body, TimeSpan At)? _lastNotification;
     private Func<Task>? _primaryAction;
     private bool _autostartEnabled;
@@ -88,12 +91,14 @@ public sealed class FlyoutViewModel : ObservableObject
         IOperationRunner runner,
         IAutostart autostart,
         IGuiSettingsStore settingsStore,
-        IShell shell)
+        IShell shell,
+        IDiagnosticsSource? diagnostics = null)
     {
         _runner = runner;
         _autostart = autostart;
         _settingsStore = settingsStore;
         _shell = shell;
+        _diagnostics = diagnostics;
         _settings = settingsStore.Load();
         _ui = SynchronizationContext.Current;
         _autostartEnabled = autostart.IsEnabled;
@@ -113,6 +118,9 @@ public sealed class FlyoutViewModel : ObservableObject
         OpenSourceCommand = new RelayCommand(() => _shell.OpenUrl(GitHubUrl));
         OpenSoundSettingsCommand = new RelayCommand(_shell.OpenSoundRecordingSettings);
         CopyReportCommand = new RelayCommand(() => _ = CopyReportAsync());
+        CopyDiagnosticsCommand = new RelayCommand(
+            () => _ = CopyDiagnosticsAsync(),
+            () => _diagnostics is not null && !_collectingDiagnostics);
         QuitCommand = new RelayCommand(_shell.Quit);
         SelectLanguageCommand = new RelayCommand(parameter =>
         {
@@ -144,6 +152,7 @@ public sealed class FlyoutViewModel : ObservableObject
     public RelayCommand OpenSourceCommand { get; }
     public RelayCommand OpenSoundSettingsCommand { get; }
     public RelayCommand CopyReportCommand { get; }
+    public RelayCommand CopyDiagnosticsCommand { get; }
     public RelayCommand QuitCommand { get; }
     public RelayCommand SelectLanguageCommand { get; }
 
@@ -177,6 +186,7 @@ public sealed class FlyoutViewModel : ObservableObject
         {
             if (SetProperty(ref _page, value))
             {
+                ResetDiagnosticsCopied();
                 OnPropertyChanged(nameof(IsMainPage));
                 OnPropertyChanged(nameof(IsSettingsPage));
                 OnPropertyChanged(nameof(IsHelpPage));
@@ -251,6 +261,9 @@ public sealed class FlyoutViewModel : ObservableObject
     public string CopyReportText => _copied ? Text.Get("gui.copied") : L.CopyReport;
 
     // ----- Settings -----
+    public bool CanCopyDiagnostics => _diagnostics is not null;
+    public string DiagnosticsText => _diagnosticsCopied ? Text.Get("gui.settings.diagnosticsCopied") : L.Diagnostics;
+
     public bool AutostartEnabled
     {
         get => _autostartEnabled;
@@ -365,6 +378,7 @@ public sealed class FlyoutViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentLanguageName));
         OnPropertyChanged(nameof(Languages));
         OnPropertyChanged(nameof(CopyReportText));
+        OnPropertyChanged(nameof(DiagnosticsText));
         Refresh();
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -486,6 +500,42 @@ public sealed class FlyoutViewModel : ObservableObject
 
         _copied = true;
         OnPropertyChanged(nameof(CopyReportText));
+    }
+
+    internal async Task CopyDiagnosticsAsync()
+    {
+        if (_diagnostics is null || _collectingDiagnostics)
+            return;
+
+        _collectingDiagnostics = true;
+        CopyDiagnosticsCommand.NotifyCanExecuteChanged();
+        try
+        {
+            // Reads the services, the microphones and the log: keep it off the UI thread.
+            var text = await Task.Run(_diagnostics.Collect).ConfigureAwait(true);
+            await _shell.CopyTextAsync(text).ConfigureAwait(true);
+            _diagnosticsCopied = true;
+            OnPropertyChanged(nameof(DiagnosticsText));
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // The row simply does not confirm; the reason is in the log.
+            CrashLog.Write("Copying the diagnostics failed", exception);
+        }
+        finally
+        {
+            _collectingDiagnostics = false;
+            CopyDiagnosticsCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void ResetDiagnosticsCopied()
+    {
+        if (!_diagnosticsCopied)
+            return;
+
+        _diagnosticsCopied = false;
+        OnPropertyChanged(nameof(DiagnosticsText));
     }
 
     private void Notify(string title, string body)
