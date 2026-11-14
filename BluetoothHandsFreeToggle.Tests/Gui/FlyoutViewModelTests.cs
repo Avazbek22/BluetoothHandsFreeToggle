@@ -1,6 +1,7 @@
 using BluetoothHandsFreeToggle.App;
 using BluetoothHandsFreeToggle.Core;
 using BluetoothHandsFreeToggle.Gui;
+using BluetoothHandsFreeToggle.Gui.Controls;
 using BluetoothHandsFreeToggle.Gui.Model;
 using BluetoothHandsFreeToggle.Gui.Services;
 using BluetoothHandsFreeToggle.Gui.ViewModels;
@@ -21,7 +22,7 @@ public sealed class FlyoutViewModelTests
         var panel = new PanelHarness().Create();
 
         Assert.Equal(FlyoutMode.Live, panel.Mode);
-        Assert.Equal("Checking the headset…", panel.Title);
+        Assert.Equal("Checking the headphones…", panel.Title);
         Assert.False(panel.HasPrimary);
         Assert.False(panel.HardSwitchEnabled);
         Assert.Equal("HandsFree Toggle — checking…", panel.TrayState.Tooltip);
@@ -33,12 +34,13 @@ public sealed class FlyoutViewModelTests
         var panel = new PanelHarness().Create(Empty());
 
         Assert.False(panel.HasDevice);
-        Assert.Equal("No headset connected", panel.Title);
-        Assert.Equal("Waiting", panel.CenterText);
-        Assert.Equal("Restart HFP", panel.PrimaryText);
+        Assert.Equal("Headphones not connected", panel.Title);
+        Assert.True(panel.HasRingIcon);
+        Assert.Empty(panel.CenterText);
+        Assert.Equal("Restart headphone sound", panel.PrimaryText);
         Assert.False(panel.PrimaryIsMain);
         Assert.Equal(ContextKind.MicNone, panel.Context);
-        Assert.Equal("Connect a headset to see which apps use its microphone.", panel.MicDescription);
+        Assert.Equal("Connect your headphones to see which apps use their microphone.", panel.MicDescription);
         Assert.Null(panel.TrayState.Dot);
     });
 
@@ -53,6 +55,10 @@ public sealed class FlyoutViewModelTests
         Assert.Equal(ContextKind.MicFree, panel.Context);
         Assert.True(panel.ShowDefaultMicrophone);
         Assert.Equal(Tone.Green, panel.TrayState.Dot);
+        Assert.True(panel.HasRingIcon);
+        Assert.Empty(panel.CenterText);
+        Assert.False(panel.HardSwitchOn);
+        Assert.StartsWith("Off: Windows is set up exactly as without the app.", panel.HardCaption, StringComparison.Ordinal);
     });
 
     [Fact]
@@ -60,11 +66,11 @@ public sealed class FlyoutViewModelTests
     {
         var panel = new PanelHarness().Create(CallMode("Discord", "Google Chrome"));
 
-        Assert.Equal("Call", panel.ChipText);
-        Assert.Equal("Headset is in call mode", panel.Title);
-        Assert.Equal("The sound is squeezed to mono because Discord and Google Chrome are using the headset microphone.", panel.Description);
-        Assert.Equal("Close Discord and Google Chrome or choose another microphone in them, otherwise Windows turns call mode back on.", panel.MicDescription);
-        Assert.Equal("Fix sound", panel.PrimaryText);
+        Assert.Equal("Mono", panel.ChipText);
+        Assert.Equal("Headphones are in call mode", panel.Title);
+        Assert.Equal("That is why the sound is mono and muffled: Discord and Google Chrome are using the headphone microphone.", panel.Description);
+        Assert.Equal("Close Discord and Google Chrome or choose another microphone in them, or the sound turns mono again.", panel.MicDescription);
+        Assert.Equal("Bring back stereo", panel.PrimaryText);
         Assert.True(panel.PrimaryIsMain);
         Assert.True(panel.PrimaryShowsShield);
         Assert.Equal(ContextKind.MicBusy, panel.Context);
@@ -103,16 +109,17 @@ public sealed class FlyoutViewModelTests
         Assert.False(panel.HasPrimary);
         Assert.Equal(ContextKind.MicOff, panel.Context);
         Assert.Equal("off", panel.MicStatusText);
+        Assert.StartsWith("On: the headphone microphone is off.", panel.HardCaption, StringComparison.Ordinal);
     });
 
     [Fact]
-    public Task HungServiceIsNamedAndFixable() => Ui.RunAsync(() =>
+    public Task HungSoundIsExplainedAndFixable() => Ui.RunAsync(() =>
     {
         var services = new List<ServiceSnapshot> { Service("BthHFSrv"), Service("BTAGService", ServiceRunState.StopPending) };
         var panel = new PanelHarness().Create(LiveStatus.Evaluate(services, IdleHeadset(), new HashSet<string> { "BTAGService" }));
 
-        Assert.Equal("HFP service is not responding", panel.Title);
-        Assert.Equal("Bluetooth Audio Gateway is stuck. Fixing restarts it safely.", panel.Description);
+        Assert.Equal("Headphone sound is stuck", panel.Title);
+        Assert.Equal("Windows stopped responding while switching the headphone mode. The button below restarts everything safely.", panel.Description);
         Assert.True(panel.PrimaryIsMain);
         Assert.Equal(Tone.Amber, panel.TrayState.Dot);
     });
@@ -140,8 +147,9 @@ public sealed class FlyoutViewModelTests
 
         Assert.Equal(FlyoutMode.AwaitingPermission, panel.Mode);
         Assert.True(panel.IsBusy);
-        Assert.Equal("UAC", panel.CenterText);
-        Assert.Equal("Confirm the Windows administrator prompt.", panel.Description);
+        Assert.True(panel.HasRingIcon);
+        Assert.Empty(panel.CenterText);
+        Assert.Equal("Click “Yes” in the Windows prompt.", panel.Description);
         Assert.Equal(ContextKind.Steps, panel.Context);
         Assert.Equal(5, panel.Steps.Count);
         Assert.All(panel.Steps, step => Assert.True(step.IsPending));
@@ -165,9 +173,9 @@ public sealed class FlyoutViewModelTests
         await panel.RunAsync(OperationKind.Soft);
 
         Assert.Equal(FlyoutMode.Live, panel.Mode);
-        Assert.Equal("Headset is in call mode", panel.Title);
+        Assert.Equal("Headphones are in call mode", panel.Title);
         Assert.True(panel.HasNotice);
-        Assert.Equal("Cancelled: changing services needs administrator permission.", panel.Notice);
+        Assert.Equal("Cancelled: “No” was chosen in the Windows prompt. Nothing changed.", panel.Notice);
     });
 
     [Fact]
@@ -185,8 +193,9 @@ public sealed class FlyoutViewModelTests
 
         Assert.Equal(FlyoutMode.Working, panel.Mode);
         Assert.True(panel.Steps[0].IsActive);
-        Assert.Equal("Waiting for the service to stop · 2 s", panel.Description);
-        Assert.Equal("elapsed", panel.CenterSubtitle);
+        Assert.Equal("Waiting for Windows · 2 s", panel.Description);
+        Assert.False(panel.HasRingIcon);
+        Assert.Matches(@"^\d+ s$", panel.CenterText);
         Assert.InRange(panel.RingValue, 0, 0.2);
 
         harness.Runner.Release();
@@ -208,8 +217,8 @@ public sealed class FlyoutViewModelTests
         panel.ApplyStatus(Stereo());
 
         Assert.Equal(FlyoutMode.Done, panel.Mode);
-        Assert.Equal("Done", panel.Title);
-        Assert.Equal("The service restarted. The sound is back in stereo.", panel.Description);
+        Assert.Equal("Stereo is back", panel.Title);
+        Assert.Equal("This was a one-time restart: Windows settings did not change, so there is nothing to undo.", panel.Description);
         Assert.Equal("Close", panel.PrimaryText);
         Assert.Equal(1, refreshRequests);
 
@@ -228,7 +237,9 @@ public sealed class FlyoutViewModelTests
         await panel.RunAsync(OperationKind.Soft);
 
         Assert.Equal(FlyoutMode.Done, panel.Mode);
-        Assert.Contains("Discord is still using the headset microphone", panel.Description, StringComparison.Ordinal);
+        Assert.Equal("Still mono", panel.Title);
+        Assert.Same(Icons.Mic, panel.RingIcon);
+        Assert.Contains("Discord is still using the headphone microphone", panel.Description, StringComparison.Ordinal);
     });
 
     [Fact]
@@ -261,7 +272,7 @@ public sealed class FlyoutViewModelTests
         Assert.Equal([OperationKind.Hard], harness.Runner.Calls);
         Assert.Equal(FlyoutMode.RebootRequired, panel.Mode);
         Assert.Equal("Restart required", panel.Title);
-        Assert.Equal("HFP startup is already disabled. Restart Windows to finish Hard mode.", panel.Description);
+        Assert.Equal("Call mode is already blocked. Restart the computer for “Always stereo” to take effect.", panel.Description);
         Assert.Equal(ContextKind.Info, panel.Context);
         Assert.Equal(["Bluetooth Audio Gateway (HFP) is still running.", "Restart Windows to finish."], panel.InfoLines);
         Assert.True(panel.CanCopyReport);
@@ -278,7 +289,7 @@ public sealed class FlyoutViewModelTests
         await panel.RunAsync(OperationKind.Soft);
 
         Assert.Equal(FlyoutMode.Failed, panel.Mode);
-        Assert.Equal("Could not restart HFP", panel.Title);
+        Assert.Equal("Could not bring back stereo", panel.Title);
         Assert.Equal(["BthHFSrv did not stop within 60 s."], panel.InfoLines);
         Assert.Equal("Copy report", panel.CopyReportText);
 
@@ -300,7 +311,7 @@ public sealed class FlyoutViewModelTests
         await panel.RunAsync(OperationKind.Restore);
 
         Assert.Equal(FlyoutMode.Failed, panel.Mode);
-        Assert.Equal("Could not restore HFP", panel.Title);
+        Assert.Equal("Could not put things back", panel.Title);
         Assert.Equal(["The file is not a valid application."], panel.InfoLines);
     });
 
@@ -328,7 +339,7 @@ public sealed class FlyoutViewModelTests
 
         Assert.Equal([OperationKind.Restore], harness.Runner.Calls);
         Assert.Equal(FlyoutMode.Done, panel.Mode);
-        Assert.Equal("HFP restored", panel.Title);
+        Assert.Equal("Everything is as it was", panel.Title);
     });
 
     [Fact]
@@ -357,8 +368,8 @@ public sealed class FlyoutViewModelTests
         panel.ApplyStatus(CallMode("Discord"));
 
         var notification = Assert.Single(notifications);
-        Assert.Equal("Headset switched to call mode", notification.Title);
-        Assert.Equal("Discord is using the headset microphone, so the sound is mono.", notification.Body);
+        Assert.Equal("Headphones switched to call mode", notification.Title);
+        Assert.Equal("Discord is using the headphone microphone, so the sound turned mono.", notification.Body);
     });
 
     [Fact]
@@ -371,7 +382,7 @@ public sealed class FlyoutViewModelTests
         panel.ApplyStatus(CallMode("Discord", "Zoom"));
 
         var notification = Assert.Single(notifications);
-        Assert.Equal("Zoom started recording from the headset microphone.", notification.Body);
+        Assert.Equal("Zoom started recording from the headphone microphone.", notification.Body);
     });
 
     [Fact]
@@ -389,7 +400,7 @@ public sealed class FlyoutViewModelTests
         panel.ApplyStatus(CallMode("Zoom"));
 
         var notification = Assert.Single(notifications);
-        Assert.Equal("Headset microphone in use", notification.Title);
+        Assert.Equal("Headphone microphone in use", notification.Title);
         Assert.False(harness.Settings.Stored.NotifyCallMode);
         Assert.False(harness.Settings.Stored.NotifyMicrophone);
         Assert.Equal(2, harness.Settings.Saves);
@@ -487,8 +498,9 @@ public sealed class FlyoutViewModelTests
             panel.SelectLanguageCommand.Execute(panel.Languages.Single(option => option.Language == AppLanguage.Russian));
 
             Assert.Equal("Настройки", panel.L.Settings);
-            Assert.Equal("Гарнитура в режиме звонка", panel.Title);
-            Assert.Equal("Исправить звук", panel.PrimaryText);
+            Assert.Equal("Наушники в режиме звонка", panel.Title);
+            Assert.Equal("Вернуть стерео", panel.PrimaryText);
+            Assert.StartsWith("Выключено: Windows настроена так же, как без программы.", panel.HardCaption, StringComparison.Ordinal);
             Assert.Equal("Русский", panel.CurrentLanguageName);
             Assert.True(panel.Languages.Single(option => option.Language == AppLanguage.Russian).IsCurrent);
             Assert.Equal(1, languageChanges);

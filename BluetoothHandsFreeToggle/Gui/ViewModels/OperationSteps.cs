@@ -63,7 +63,7 @@ public sealed class StepItem(StepKind kind, string? service, string title, strin
 /// </summary>
 public sealed class OperationSteps
 {
-    private readonly bool _multipleServices;
+    private readonly List<string> _involved;
     private TimeSpan _activeSince;
     private double _reported;
 
@@ -81,8 +81,8 @@ public sealed class OperationSteps
                 service.RunState is not ServiceRunState.Stopped).ToList()
             : present;
 
-        // Step titles name the service only when there is more than one to tell apart.
-        _multipleServices = involved.Count > 1;
+        // Titles do not name services; with several, "(1 of 2)" tells the repeated steps apart.
+        _involved = involved.Select(service => service.FriendlyName).ToList();
 
         switch (operation)
         {
@@ -159,8 +159,7 @@ public sealed class OperationSteps
         var seconds = WholeSeconds(operationEvent.Elapsed);
         target.Detail = operationEvent.Step switch
         {
-            OperationStep.WaitingStop => Text.Format("gui.step.detail.waitStop", seconds),
-            OperationStep.WaitingStart => Text.Format("gui.step.detail.waitStart", seconds),
+            OperationStep.WaitingStop or OperationStep.WaitingStart => Text.Format("gui.step.detail.wait", seconds),
             OperationStep.WaitingSettle => Text.Format("gui.step.detail.waitSettle", seconds),
             OperationStep.NotResponding => Text.Get("gui.step.detail.notResponding"),
             OperationStep.Terminated => Text.Get("gui.step.detail.terminated"),
@@ -242,35 +241,37 @@ public sealed class OperationSteps
 
     private StepItem Create(StepKind kind, string? service)
     {
-        var shortName = service is null ? null : ShortServiceName(service);
-        var (titleKey, namedTitleKey, detailKey) = kind switch
+        // Plain words for what the user gets; the same engine step reads differently per operation.
+        var (titleKey, detailKey) = kind switch
         {
-            StepKind.Prepare when Operation is OperationKind.Hard => ("gui.step.save", null, "gui.step.detail.save"),
-            StepKind.Prepare => ("gui.step.read", null, "gui.step.detail.read"),
-            StepKind.Stop => ("gui.step.stop", "gui.step.stopNamed", "gui.step.detail.stopRequested"),
-            StepKind.Start => ("gui.step.start", "gui.step.startNamed", "gui.step.detail.startRequested"),
-            StepKind.Disable => ("gui.step.disable", "gui.step.disableNamed", "gui.step.detail.disable"),
-            StepKind.Startup => ("gui.step.startup", "gui.step.startupNamed", "gui.step.detail.startup"),
-            _ => ("gui.step.verify", (string?)null, "gui.step.detail.verify")
+            StepKind.Prepare when Operation is OperationKind.Hard => ("gui.step.save", "gui.step.detail.save"),
+            StepKind.Prepare => ("gui.step.read", "gui.step.detail.read"),
+            StepKind.Stop when Operation is OperationKind.Hard => ("gui.step.stopHard", "gui.step.detail.requested"),
+            StepKind.Stop => ("gui.step.stop", "gui.step.detail.requested"),
+            StepKind.Start when Operation is OperationKind.Restore => ("gui.step.startRestore", "gui.step.detail.requested"),
+            StepKind.Start => ("gui.step.start", "gui.step.detail.requested"),
+            StepKind.Disable => ("gui.step.disable", "gui.step.detail.disable"),
+            StepKind.Startup => ("gui.step.startup", "gui.step.detail.startup"),
+            _ when Operation is OperationKind.Restore => ("gui.step.verifyRestore", "gui.step.detail.verify"),
+            _ => ("gui.step.verify", "gui.step.detail.verify")
         };
 
-        var title = _multipleServices && namedTitleKey is not null && shortName is not null
-            ? Text.Format(namedTitleKey, shortName)
-            : Text.Get(titleKey);
+        var title = Text.Get(titleKey);
+        var part = PartNumber(service);
+        if (_involved.Count > 1 && part > 0)
+            title = Text.Format("gui.step.part", title, part, _involved.Count);
 
         return new StepItem(kind, service, title, Text.Get(detailKey));
     }
 
+    /// <summary>1-based position of the service among the planned ones; 0 for none or an unexpected one.</summary>
+    private int PartNumber(string? service)
+        => service is null
+            ? 0
+            : _involved.FindIndex(name => string.Equals(name, service, StringComparison.OrdinalIgnoreCase)) + 1;
+
     private static bool SameService(string? left, string? right)
         => left is null || right is null || string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>"Bluetooth Audio Gateway (HFP)" becomes "Bluetooth Audio Gateway".</summary>
-    public static string ShortServiceName(string friendlyName)
-    {
-        ArgumentNullException.ThrowIfNull(friendlyName);
-        var bracket = friendlyName.LastIndexOf(" (", StringComparison.Ordinal);
-        return bracket > 0 ? friendlyName[..bracket] : friendlyName;
-    }
 
     private static string WholeSeconds(TimeSpan? elapsed)
         => Math.Max(0, (int)(elapsed ?? TimeSpan.Zero).TotalSeconds).ToString(CultureInfo.CurrentCulture);

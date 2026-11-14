@@ -53,16 +53,14 @@
                 <StackPanel Spacing="10" Margin="0,4,0,0">
                     <Panel Width="148" Height="148" HorizontalAlignment="Center">
                         <c:ProgressRing Name="Ring" Value="{Binding RingValue}" RingBrush="{Binding RingBrush}" Thickness="8" />
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-                            <c:StrokeIcon Data="{Binding RingIcon}" IsVisible="{Binding HasRingIcon}" Size="26"
+                        <!-- Only the state icon; elapsed seconds replace it while an operation runs. -->
+                        <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <c:StrokeIcon Data="{Binding RingIcon}" IsVisible="{Binding HasRingIcon}" Size="40"
                                           Foreground="{Binding RingIconBrush}" HorizontalAlignment="Center" />
-                            <TextBlock Name="CenterText" Text="{Binding CenterText}" FontSize="{Binding CenterFontSize}"
+                            <TextBlock Name="CenterText" Text="{Binding CenterText}" FontSize="32"
                                        FontWeight="SemiBold" HorizontalAlignment="Center"
                                        IsVisible="{Binding CenterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                            <TextBlock Classes="caption" Text="{Binding CenterSubtitle}" HorizontalAlignment="Center"
-                                       TextWrapping="NoWrap"
-                                       IsVisible="{Binding CenterSubtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                        </StackPanel>
+                        </Panel>
                     </Panel>
 
                     <StackPanel Spacing="2" Margin="8,0">
@@ -102,7 +100,8 @@
                                               Foreground="{StaticResource MutedBrush}"
                                               ToolTip.Tip="{Binding L.AdminRequired}" />
                             </StackPanel>
-                            <TextBlock Classes="caption" Text="{Binding L.HardDescription}" />
+                            <TextBlock Name="HardCaption" Classes="caption" Text="{Binding HardCaption}"
+                                       Foreground="{Binding HardCaptionBrush}" />
                         </StackPanel>
                         <c:PillSwitch Grid.Column="1" Name="HardSwitch" Margin="12,0,0,0" VerticalAlignment="Center"
                                       AutoToggle="False"

@@ -5,6 +5,16 @@
              x:Class="BluetoothHandsFreeToggle.Gui.Views.HelpView"
              x:DataType="vm:FlyoutViewModel">
 
+    <UserControl.Styles>
+        <!-- Technical details: no card fill and a muted heading, so the plain answers stand out. -->
+        <Style Selector="Border.card.aside">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBlock.label.aside">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        </Style>
+    </UserControl.Styles>
+
     <Grid RowDefinitions="Auto,*" Margin="16">
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Height="36">
             <Button Name="HelpBackButton" Theme="{StaticResource IconButton}" Foreground="{StaticResource TextBrush}"
@@ -28,9 +38,9 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:HelpSection">
-                            <Border Classes="card" Padding="12">
+                            <Border Classes="card" Classes.aside="{Binding IsAside}" Padding="12">
                                 <StackPanel Spacing="4">
-                                    <TextBlock Classes="label" Text="{Binding Title}" />
+                                    <TextBlock Classes="label" Classes.aside="{Binding IsAside}" Text="{Binding Title}" />
                                     <TextBlock Text="{Binding Body}" FontSize="13" LineHeight="19"
                                                Foreground="{StaticResource SubBrush}" TextWrapping="Wrap" />
                                 </StackPanel>

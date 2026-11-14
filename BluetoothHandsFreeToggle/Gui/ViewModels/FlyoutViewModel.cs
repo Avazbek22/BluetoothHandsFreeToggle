@@ -76,7 +76,6 @@ public sealed class FlyoutViewModel : ObservableObject
     private ToggleReport? _report;
     private string? _failure;
     private TimeSpan _operationStart;
-    private TimeSpan _operationElapsed;
     private string? _notice;
     private long _noticeVersion;
     private bool _copied;
@@ -204,9 +203,9 @@ public sealed class FlyoutViewModel : ObservableObject
     public IBrush RingIconBrush { get; private set; } = Palette.Foreground(Tone.Muted);
     public Geometry? RingIcon { get; private set; }
     public bool HasRingIcon => RingIcon is not null;
+
+    /// <summary>Elapsed seconds while an operation runs; every other state shows only the icon.</summary>
     public string CenterText { get; private set; } = "";
-    public double CenterFontSize { get; private set; } = 20;
-    public string CenterSubtitle { get; private set; } = "";
 
     public string Title { get; private set; } = "";
     public string Description { get; private set; } = "";
@@ -222,6 +221,10 @@ public sealed class FlyoutViewModel : ObservableObject
 
     // ----- Hard mode switch -----
     public bool HardSwitchOn { get; private set; }
+
+    /// <summary>Says whether Windows is changed right now and how to undo it.</summary>
+    public string HardCaption { get; private set; } = "";
+    public IBrush HardCaptionBrush { get; private set; } = Palette.Foreground(Tone.Muted);
     public bool HardSwitchEnabled => !IsBusy && _status.HasServices && _status.Phase is not HeadsetPhase.Unavailable;
 
     // ----- Context card -----
@@ -415,7 +418,6 @@ public sealed class FlyoutViewModel : ObservableObject
         await Task.Yield();
 
         steps.Items.CollectionChanged -= OnStepsChanged;
-        _operationElapsed = Mode == FlyoutMode.Working ? _clock.Elapsed - _operationStart : TimeSpan.Zero;
 
         switch (outcome.Kind)
         {
@@ -629,8 +631,6 @@ public sealed class FlyoutViewModel : ObservableObject
         RingIconBrush = Palette.Foreground(view.RingTone == Tone.Red ? Tone.Red : view.RingTone);
         RingIcon = view.Icon;
         CenterText = view.Center;
-        CenterFontSize = view.Icon is null ? 32 : 20;
-        CenterSubtitle = view.CenterSub;
         Title = view.Title;
         Description = view.Description;
 
@@ -645,6 +645,8 @@ public sealed class FlyoutViewModel : ObservableObject
             FlyoutMode.AwaitingPermission or FlyoutMode.Working => _steps?.Operation == OperationKind.Restore,
             _ => status.HardModeActive
         };
+        HardCaption = Text.Get(HardSwitchOn ? "gui.hardCard.on" : "gui.hardCard.off");
+        HardCaptionBrush = Palette.Foreground(HardSwitchOn ? Tone.Amber : Tone.Muted);
 
         // Keep the same list objects when nothing changed, so the item views are not rebuilt.
         var previousApps = MicApps;
@@ -802,7 +804,6 @@ public sealed class FlyoutViewModel : ObservableObject
         double Ring,
         Geometry? Icon,
         string Center,
-        string CenterSub,
         string Title,
         string Description,
         PrimaryButton? Primary);
@@ -819,60 +820,52 @@ public sealed class FlyoutViewModel : ObservableObject
         {
             case HeadsetPhase.Stereo:
                 return new StateView(
-                    Text.Get("gui.chip.stereo"), Tone.Green, Tone.Green, 1, Icons.Check,
-                    Text.Get("gui.ring.stereo"), "A2DP",
+                    Text.Get("gui.chip.stereo"), Tone.Green, Tone.Green, 1, Icons.Check, "",
                     Text.Get("gui.stereo.title"), Text.Get("gui.stereo.desc"),
                     SoftButton(main: false));
 
             case HeadsetPhase.CallMode:
                 return new StateView(
-                    Text.Get("gui.chip.call"), Tone.Red, Tone.Red, 1, Icons.Mic,
-                    Text.Get("gui.ring.mono"), Text.Get("gui.ring.monoSub"),
+                    Text.Get("gui.chip.call"), Tone.Red, Tone.Red, 1, Icons.Mic, "",
                     Text.Get("gui.call.title"),
                     FormatApps("gui.call.desc", "gui.call.desc.many", AppNames(status)),
                     SoftButton(main: true));
 
             case HeadsetPhase.Hard:
                 return new StateView(
-                    Text.Get("gui.chip.hard"), Tone.Light, Tone.Light, 1, Icons.Lock,
-                    "HFP", Text.Get("gui.ring.blockedSub"),
+                    Text.Get("gui.chip.hard"), Tone.Light, Tone.Light, 1, Icons.Lock, "",
                     Text.Get("gui.hard.title"), Text.Get("gui.hard.desc"),
                     null);
 
             case HeadsetPhase.Hung:
                 return new StateView(
-                    Text.Get("gui.chip.hung"), Tone.Amber, Tone.Amber, 1, Icons.Alert,
-                    "HFP", Text.Get("gui.ring.hungSub"),
-                    Text.Get("gui.hung.title"),
-                    Text.Format("gui.hung.desc", OperationSteps.ShortServiceName(status.HungService!.FriendlyName)),
+                    Text.Get("gui.chip.hung"), Tone.Amber, Tone.Amber, 1, Icons.Alert, "",
+                    Text.Get("gui.hung.title"), Text.Get("gui.hung.desc"),
                     SoftButton(main: true));
 
             case HeadsetPhase.ServicesMissing:
+                // Nothing is wrong: without call mode the sound simply stays in stereo.
                 return new StateView(
-                    Text.Get("gui.chip.missing"), Tone.Muted, Tone.Muted, 0, Icons.Alert,
-                    "HFP", Text.Get("gui.ring.missingSub"),
+                    Text.Get("gui.chip.missing"), Tone.Muted, Tone.Muted, 0, Icons.Check, "",
                     Text.Get("gui.missing.title"), Text.Get("gui.missing.desc"),
                     null);
 
             case HeadsetPhase.Unavailable:
                 return new StateView(
-                    Text.Get("gui.chip.unavailable"), Tone.Amber, Tone.Amber, 1, Icons.Alert,
-                    "HFP", Text.Get("gui.ring.unavailableSub"),
+                    Text.Get("gui.chip.unavailable"), Tone.Amber, Tone.Amber, 1, Icons.Alert, "",
                     Text.Get("gui.unavailable.title"),
                     Text.Format("gui.unavailable.desc", status.Error ?? Text.Get("service.unknownError")),
                     null);
 
             case HeadsetPhase.Loading:
                 return new StateView(
-                    null, Tone.Muted, Tone.Muted, 0, Icons.Headphones,
-                    "", "",
+                    null, Tone.Muted, Tone.Muted, 0, Icons.Headphones, "",
                     Text.Get("gui.loading.title"), "",
                     null);
 
             default:
                 return new StateView(
-                    null, Tone.Muted, Tone.Muted, 0, Icons.Bluetooth,
-                    Text.Get("gui.ring.waiting"), Text.Get("gui.ring.waitingSub"),
+                    null, Tone.Muted, Tone.Muted, 0, Icons.Bluetooth, "",
                     Text.Get("gui.none.title"), Text.Get("gui.none.desc"),
                     SoftButton(main: false));
         }
@@ -886,8 +879,7 @@ public sealed class FlyoutViewModel : ObservableObject
     });
 
     private StateView AwaitingView() => new(
-        Text.Get("gui.chip.working"), Tone.Red, Tone.Red, 0, Icons.Shield,
-        "UAC", Text.Get("gui.ring.uacSub"),
+        Text.Get("gui.chip.working"), Tone.Red, Tone.Red, 0, Icons.Shield, "",
         OperationTitle(), Text.Get("gui.working.uac"),
         null);
 
@@ -896,8 +888,7 @@ public sealed class FlyoutViewModel : ObservableObject
         var elapsed = now - _operationStart;
         var progress = _steps?.EstimateProgress(now) ?? 0;
         return new StateView(
-            Text.Get("gui.chip.working"), Tone.Red, Tone.Red, progress, null,
-            Seconds(elapsed), Text.Get("gui.ring.elapsedSub"),
+            Text.Get("gui.chip.working"), Tone.Red, Tone.Red, progress, null, Seconds(elapsed),
             OperationTitle(),
             _steps?.Active?.Detail ?? Text.Get("gui.working.finishing"),
             null);
@@ -906,23 +897,27 @@ public sealed class FlyoutViewModel : ObservableObject
     private StateView DoneView()
     {
         var restore = _steps?.Operation == OperationKind.Restore;
+        var stillMono = !restore && _status.Phase == HeadsetPhase.CallMode;
+        var title = restore ? "gui.done.restore.title"
+            : stillMono ? "gui.done.soft.busyTitle"
+            : "gui.done.soft.title";
         var description = restore
             ? Text.Get("gui.done.restore.desc")
-            : _status.Phase == HeadsetPhase.CallMode
+            : stillMono
                 ? FormatApps("gui.done.soft.micBusy", "gui.done.soft.micBusy.many", AppNames(_status))
                 : Text.Get("gui.done.soft.desc");
 
+        // The restart ran, but an app took the microphone again: no green tick for a mono result.
+        var tone = stillMono ? Tone.Amber : Tone.Green;
         return new StateView(
-            Text.Get("gui.chip.done"), Tone.Green, Tone.Green, 1, Icons.Check,
-            Seconds(_operationElapsed), Text.Get("gui.ring.doneSub"),
-            Text.Get(restore ? "gui.done.restore.title" : "gui.done.soft.title"),
+            Text.Get("gui.chip.done"), tone, tone, 1, stillMono ? Icons.Mic : Icons.Check, "",
+            Text.Get(title),
             description,
             new PrimaryButton(Text.Get("gui.action.close"), Main: false, Shield: false, DismissResultAsync));
     }
 
     private StateView RebootView() => new(
-        Text.Get("gui.chip.reboot"), Tone.Amber, Tone.Amber, 1, Icons.Restart,
-        Text.Get("gui.ring.pause"), Text.Get("gui.ring.pauseSub"),
+        Text.Get("gui.chip.reboot"), Tone.Amber, Tone.Amber, 1, Icons.Restart, "",
         Text.Get("gui.reboot.title"),
         Text.Get(_steps?.Operation switch
         {
@@ -942,8 +937,7 @@ public sealed class FlyoutViewModel : ObservableObject
         };
 
         return new StateView(
-            Text.Get("gui.chip.error"), Tone.Red, Tone.Red, 1, Icons.Alert,
-            Text.Get("gui.ring.error"), Text.Get("gui.ring.errorSub"),
+            Text.Get("gui.chip.error"), Tone.Red, Tone.Red, 1, Icons.Alert, "",
             Text.Get(titleKey),
             Text.Get("gui.failed.desc"),
             new PrimaryButton(Text.Get("gui.action.close"), Main: false, Shield: false, DismissResultAsync));

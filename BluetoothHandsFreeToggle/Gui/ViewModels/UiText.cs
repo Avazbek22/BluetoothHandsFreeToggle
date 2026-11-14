@@ -15,7 +15,6 @@ public sealed class UiText
     public string AdminRequired { get; } = Text.Get("gui.adminRequired");
 
     public string HardTitle { get; } = Text.Get("gui.hardCard.title");
-    public string HardDescription { get; } = Text.Get("gui.hardCard.desc");
 
     public string StepsTitle { get; } = Text.Get("gui.steps.title");
     public string MicTitle { get; } = Text.Get("gui.mic.title");
@@ -48,14 +47,16 @@ public sealed class UiText
     public string HelpTitle { get; } = Text.Get("gui.help.title");
     public IReadOnlyList<HelpSection> HelpSections { get; } =
     [
-        new(Text.Get("gui.help.what.title"), Text.Get("gui.help.what.body")),
+        new(Text.Get("gui.help.why.title"), Text.Get("gui.help.why.body")),
         new(Text.Get("gui.help.fix.title"), Text.Get("gui.help.fix.body")),
         new(Text.Get("gui.help.hard.title"), Text.Get("gui.help.hard.body")),
         new(Text.Get("gui.help.mic.title"), Text.Get("gui.help.mic.body")),
+        new(Text.Get("gui.help.undo.title"), Text.Get("gui.help.undo.body")),
         new(Text.Get("gui.help.safety.title"), Text.Get("gui.help.safety.body")),
-        new(Text.Get("gui.help.limits.title"), Text.Get("gui.help.limits.body"))
+        new(Text.Get("gui.help.details.title"), Text.Get("gui.help.details.body"), IsAside: true)
     ];
     public string HelpConsole { get; } = Text.Get("gui.help.console");
 }
 
-public sealed record HelpSection(string Title, string Body);
+/// <summary>A help card; an aside (technical details) is drawn quieter than the main answers.</summary>
+public sealed record HelpSection(string Title, string Body, bool IsAside = false);

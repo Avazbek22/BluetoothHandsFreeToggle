@@ -19,8 +19,9 @@ public sealed class OperationStepsTests
         Assert.Equal(
             [StepKind.Stop, StepKind.Start, StepKind.Stop, StepKind.Start, StepKind.Verify],
             steps.Items.Select(item => item.Kind));
-        Assert.Equal("Stopping Bluetooth Hands-Free Service", steps.Items[0].Title);
-        Assert.Equal("Starting Bluetooth Audio Gateway", steps.Items[3].Title);
+        Assert.Equal("Resetting call mode (1 of 2)", steps.Items[0].Title);
+        Assert.Equal("Starting headphone sound again (2 of 2)", steps.Items[3].Title);
+        Assert.Equal("Checking that stereo is back", steps.Items[4].Title);
         Assert.All(steps.Items, item => Assert.True(item.IsPending));
     }
 
@@ -37,7 +38,7 @@ public sealed class OperationStepsTests
         var steps = new OperationSteps(OperationKind.Soft, services);
 
         Assert.Equal([StepKind.Stop, StepKind.Start, StepKind.Verify], steps.Items.Select(item => item.Kind));
-        Assert.Equal("Stopping the service", steps.Items[0].Title);
+        Assert.Equal("Resetting call mode", steps.Items[0].Title);
     }
 
     [Fact]
@@ -48,7 +49,10 @@ public sealed class OperationStepsTests
         Assert.Equal(
             [StepKind.Prepare, StepKind.Disable, StepKind.Stop, StepKind.Disable, StepKind.Stop, StepKind.Verify],
             steps.Items.Select(item => item.Kind));
-        Assert.Equal("Saving the original state", steps.Items[0].Title);
+        Assert.Equal("Remembering how it was", steps.Items[0].Title);
+        Assert.Equal("Blocking call mode (1 of 2)", steps.Items[1].Title);
+        Assert.Equal("Turning off the headphone microphone (2 of 2)", steps.Items[4].Title);
+        Assert.Equal("Checking that stereo is back", steps.Items[5].Title);
     }
 
     [Fact]
@@ -59,7 +63,10 @@ public sealed class OperationStepsTests
         Assert.Equal(
             [StepKind.Prepare, StepKind.Startup, StepKind.Start, StepKind.Startup, StepKind.Start, StepKind.Verify],
             steps.Items.Select(item => item.Kind));
-        Assert.Equal("Reading the backup", steps.Items[0].Title);
+        Assert.Equal("Loading the saved settings", steps.Items[0].Title);
+        Assert.Equal("Allowing call mode again (1 of 2)", steps.Items[1].Title);
+        Assert.Equal("Turning the headphone microphone back on (1 of 2)", steps.Items[2].Title);
+        Assert.Equal("Checking that everything is back", steps.Items[5].Title);
     }
 
     [Fact]
@@ -104,7 +111,7 @@ public sealed class OperationStepsTests
             TimeSpan.FromSeconds(9));
 
         Assert.Same(steps.Items[0], steps.Active);
-        Assert.Equal("The service is not responding. Safely ending its process…", steps.Items[0].Detail);
+        Assert.Equal("Windows is not responding. Safely forcing a restart…", steps.Items[0].Detail);
     }
 
     [Fact]
@@ -115,7 +122,7 @@ public sealed class OperationStepsTests
             new OperationEvent(OperationEventKind.Waiting, "", TimeSpan.FromSeconds(3.7), OperationStep.WaitingStop, HandsFree),
             TimeSpan.Zero);
 
-        Assert.Equal("Waiting for the service to stop · 3 s", steps.Items[0].Detail);
+        Assert.Equal("Waiting for Windows · 3 s", steps.Items[0].Detail);
     }
 
     [Fact]
@@ -130,6 +137,17 @@ public sealed class OperationStepsTests
             [StepKind.Stop, StepKind.Startup, StepKind.Start, StepKind.Verify],
             steps.Items.Select(item => item.Kind));
         Assert.Same(steps.Items[1], steps.Active);
+        Assert.Equal("Allowing call mode again", steps.Items[1].Title);
+    }
+
+    [Fact]
+    public void UnplannedServiceGetsNoPartNumber()
+    {
+        var steps = new OperationSteps(OperationKind.Soft, Services());
+
+        steps.Apply(new OperationEvent(OperationEventKind.Step, "", Step: OperationStep.Stopping, Service: "Something else"), TimeSpan.Zero);
+
+        Assert.Equal("Resetting call mode", steps.Active!.Title);
     }
 
     [Fact]
@@ -171,11 +189,4 @@ public sealed class OperationStepsTests
 
         Assert.True(steps.EstimateProgress(TimeSpan.FromSeconds(5)) >= before);
     }
-
-    [Theory]
-    [InlineData("Bluetooth Audio Gateway (HFP)", "Bluetooth Audio Gateway")]
-    [InlineData("Hands-Free", "Hands-Free")]
-    [InlineData("(HFP)", "(HFP)")]
-    public void ShortServiceNameDropsTheTrailingTag(string friendlyName, string expected)
-        => Assert.Equal(expected, OperationSteps.ShortServiceName(friendlyName));
 }
