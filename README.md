@@ -85,7 +85,7 @@ Every action shows what Windows is doing right now, settings are one click away,
 
 | 🎮 Game-friendly | 🛡️ Recoverable | ⚡ Fast |
 |:---|:---|:---|
-| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe`; no installer, no background service, and no separate .NET runtime. |
+| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe` of about 21 MB; no installer, no background service, and no separate .NET runtime. |
 
 Additional highlights:
 
@@ -100,6 +100,7 @@ Additional highlights:
 - If the panel ever cannot start, Windows shows a message instead, and with Always stereo on it offers to put Windows back first.
 - 30-language interface with smart Windows language detection and a saved manual choice.
 - Built-in help and safe handling of partial failures.
+- Light in the background: about 25 MB of memory, near-zero CPU, and no GPU use, so games keep the whole graphics card.
 
 ## Typical use cases
 
