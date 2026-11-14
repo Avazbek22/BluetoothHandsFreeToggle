@@ -370,14 +370,7 @@ Create verified release artifacts for `win-x64` and `win-arm64`:
 ```
 
 The release script requires a clean `master` branch synchronized with `origin/master`,
-runs all tests, publishes both architectures, and generates SHA-256 checksums. Release
-notes live in `docs/release-notes/v<version>.md`; the script stops if they are missing.
-To also create the tag and the GitHub release with the files and those notes (GitHub CLI
-signed in), add `-CreateGitHubRelease`, and `-Draft` to review it before publishing:
-
-```powershell
-.\scripts\Publish-Release.ps1 -CreateGitHubRelease -Draft
-``` For a
+runs all tests, publishes both architectures, and generates SHA-256 checksums. For a
 local packaging test from another branch or a dirty working tree:
 
 ```powershell
