@@ -13,6 +13,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Avazbek22/BluetoothHandsFreeToggle?style=flat-square&color=2ea043&label=release" alt="Latest release">
+  </a>
   <a href="https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases">
     <img src="https://img.shields.io/github/downloads/Avazbek22/BluetoothHandsFreeToggle/total?style=flat-square&color=0078d4" alt="Total downloads">
   </a>
@@ -39,7 +42,7 @@
 
 > **Call of Duty, Warzone, Discord, or another game opened your Bluetooth microphone—and now the whole game sounds muffled, compressed, or mono?**
 
-BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-quality Bluetooth headset audio caused by the Hands-Free Profile (HFP). Windows can switch gaming headphones from high-quality A2DP stereo to HFP call audio when Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. The app sits in the Windows tray, shows when your headphones drop into call mode, names the app that took the microphone, and brings stereo back with one click. **Always stereo** keeps it that way if you use another microphone.
+BluetoothHandsFreeToggle is a free, open-source Windows tray app that fixes Bluetooth headphones stuck in mono, muffled "phone call" sound on Windows 10 and Windows 11. Windows switches headphones from high-quality A2DP stereo to the Hands-Free Profile (HFP) as soon as Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. The app shows when your headphones drop into call mode, names the app that took the microphone, and brings stereo back with one click. **Always stereo** keeps it that way if you use another microphone, and turning it off puts Windows back exactly as it was.
 
 ---
 
@@ -47,10 +50,16 @@ BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-q
 ## App demo 🎬
 
 <p align="center">
-  <img src=".github/assets/app-panel.png" width="900" alt="BluetoothHandsFreeToggle tray panel: headphones in call mode, stereo restored, Always stereo turned on">
+  <img src=".github/assets/app-panel.png" width="900" alt="BluetoothHandsFreeToggle tray panel on Windows 11: Bluetooth headphones in call mode because Discord uses the microphone, stereo restored with one click, Always stereo turned on">
 </p>
 
 Click the tray icon: the panel shows whether your headphones play in stereo or are stuck in call mode, which apps hold the headset microphone, and one button to bring stereo back.
+
+<p align="center">
+  <img src=".github/assets/app-screens.png" width="900" alt="BluetoothHandsFreeToggle bringing stereo back with live steps, settings with start with Windows, notifications and copy info for the developer, and the built-in help">
+</p>
+
+Every action shows what Windows is doing right now, settings are one click away, and the built-in help explains in plain words what each button changes and how to undo it.
 
 ---
 
@@ -74,7 +83,7 @@ Click the tray icon: the panel shows whether your headphones play in stereo or a
 
 | 🎮 Game-friendly | 🛡️ Recoverable | ⚡ Fast |
 |:---|:---|:---|
-| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe`; no installer or separate .NET runtime is required. |
+| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe`; no installer, no background service, and no separate .NET runtime. |
 
 Additional highlights:
 
@@ -85,6 +94,8 @@ Additional highlights:
 - **Always stereo** blocks call mode for reliable high-quality playback.
 - Turning Always stereo off returns the exact saved service startup and running state.
 - Final state verification after every operation, with a report you can copy for the developer.
+- **Copy info for the developer** in Settings copies the app and Windows version, the headphone mode, and the error log for a bug report, with your user folder hidden.
+- If the panel ever cannot start, Windows shows a message instead, and with Always stereo on it offers to put Windows back first.
 - 30-language interface with smart Windows language detection and a saved manual choice.
 - Built-in help and safe handling of partial failures.
 
@@ -131,7 +142,7 @@ On Windows 11, A2DP and HFP are exposed through unified audio endpoints, and Win
 
 ## Quick start
 
-1. Download `BluetoothHandsFreeToggle.exe` from the [latest release](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest) or install it with WinGet.
+1. Download `BluetoothHandsFreeToggle-v<version>-win-x64.exe` (or `win-arm64` for ARM PCs) from the [latest release](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest), or install it with WinGet.
 2. Run it. The icon appears in the Windows tray (check the hidden icons arrow and pin it to the taskbar if you like).
 3. Click the icon. If the headphones are in call mode, the panel names the app that is using the headset microphone: close it or choose another microphone in it.
 4. Click **Bring back stereo**. Windows asks for permission each time the app changes services: click **Yes**.
@@ -194,6 +205,10 @@ Turn **Always stereo** off. It returns the service configuration saved when you 
 
 Turn it off again. The saved state is intentionally kept until every supported service has been successfully restored and verified.
 
+### The panel does not open
+
+Windows shows a message with the reason and the log location instead of the panel. If Always stereo is on at that moment, the same message offers to put Windows back as it was, so the headset microphone never stays switched off. Attach the log from `%LocalAppData%\BluetoothHandsFreeToggle\logs\app.log` to your [issue report](https://github.com/Avazbek22/BluetoothHandsFreeToggle/issues/new).
+
 ## Safety and recovery
 
 Before Always stereo changes service configuration, the original state is stored in:
@@ -212,6 +227,7 @@ Recovery behavior is intentionally conservative:
 - A system-wide named mutex prevents concurrent operations in different Windows sessions from racing over services or backup state.
 - Every operation reads the final Windows service state and reports partial failures.
 - Live progress is shown while services stop and start, so a slow operation never looks frozen.
+- Service changes run in a separate elevated worker that reports back to the tray app over a named pipe only that worker can connect to.
 - Always stereo disables HFP startup **before** stopping the service, so device triggers or SCM recovery actions cannot restart it midway.
 
 ### Hung service recovery
@@ -286,6 +302,18 @@ Bring back stereo changes nothing permanently. Always stereo is the only setting
 3. Quit the app and uninstall it (Settings → Apps, `winget uninstall`, or delete the file if you downloaded it yourself).
 
 Do step 1 before uninstalling: once removed, the app can no longer restore the headset microphone. Only the app's settings in `%AppData%\BluetoothHandsFreeToggle` and its log in `%LocalAppData%\BluetoothHandsFreeToggle` remain; you can delete those folders.
+
+### Does it work with AirPods, Sony, Bose, JBL, or my gaming headset?
+
+The app works at the Windows level, not with a particular model. Windows switches every Bluetooth Classic headset to HFP the same way, whether it is AirPods, Sony WH/WF, Bose, JBL, Jabra, or a Bluetooth gaming headset. Bluetooth LE Audio devices and headsets with their own USB dongle use a different audio path and may not need the app at all.
+
+### How is this different from turning off "Hands-Free Telephony" in Devices and Printers?
+
+That manual workaround switches HFP off for one paired device and has to be undone by hand. Bring back stereo fixes a stuck call without changing anything, while Always stereo blocks call mode for every headset with one switch, remembers the original Windows state, and puts it back exactly when you turn it off.
+
+### Does it need administrator rights or run in the background?
+
+Showing the status needs no special rights. Windows asks for permission only when you click Bring back stereo or flip Always stereo; that part runs in a separate short-lived process. The app installs no service or driver, and it starts with Windows only if you turn that on in Settings.
 
 ### Do I need to install .NET?
 
@@ -370,7 +398,7 @@ BluetoothHandsFreeToggle is free and open source. If it saved your game night, s
 
 ## Contributing
 
-Bug reports, reproducible Windows/Bluetooth edge cases, and focused pull requests are welcome. Please include your Windows version, headset model, affected service state, and the application that triggered HFP when reporting audio-routing problems.
+Bug reports, reproducible Windows/Bluetooth edge cases, and focused pull requests are welcome. The quickest way to report a problem: open Settings, click **Copy info for the developer**, and paste the result into a new issue together with your headset model and the app that triggered call mode.
 
 - [Open an issue](https://github.com/Avazbek22/BluetoothHandsFreeToggle/issues/new)
 - [View the source](https://github.com/Avazbek22/BluetoothHandsFreeToggle)
