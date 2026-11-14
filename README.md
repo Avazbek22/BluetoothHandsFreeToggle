@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="StereoKeeper/Assets/AppIcon.png" width="168" alt="StereoKeeper logo: headphones that stay in stereo on Windows">
+  <img src="StereoKeeper/Assets/AppIcon.png" width="168" alt="StereoKeeper Windows Bluetooth audio fix logo">
 </p>
 
 <h1 align="center">StereoKeeper</h1>
