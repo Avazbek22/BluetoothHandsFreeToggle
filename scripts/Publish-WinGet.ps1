@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Creates or updates the BluetoothHandsFreeToggle package in winget-pkgs.
+  Creates or updates the StereoKeeper package in winget-pkgs.
 
 .DESCRIPTION
   Generates x64 and Arm64 WinGet manifests with localized metadata, validates
@@ -15,9 +15,11 @@ param(
     [ValidateSet("Auto", "New", "Update")]
     [string]$Mode = "Auto",
 
+    # The identifier keeps the name from before StereoKeeper: a new one would be a separate package
+    # and existing installations would not get the update.
     [string]$PackageIdentifier = "OlimoffDev.BluetoothHandsFreeToggle",
 
-    [string]$Repository = "Avazbek22/BluetoothHandsFreeToggle",
+    [string]$Repository = "Avazbek22/StereoKeeper",
 
     [switch]$InstallTest,
 
@@ -43,10 +45,10 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "release-helpers.ps1")
 
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$projectPath = Join-Path $repositoryRoot "BluetoothHandsFreeToggle\BluetoothHandsFreeToggle.csproj"
+$projectPath = Join-Path $repositoryRoot "StereoKeeper\StereoKeeper.csproj"
 $manifestSchemaVersion = "1.12.0"
-$commandAlias = "bhft"
-$packageName = "BluetoothHandsFreeToggle"
+$commandAlias = "stereokeeper"
+$packageName = "StereoKeeper"
 
 function Write-Step {
     param([Parameter(Mandatory)][string]$Message)
@@ -140,7 +142,7 @@ function Get-GitHubRelease {
     $apiUrl = "https://api.github.com/repos/$RepositoryName/releases/tags/$encodedTag"
     $headers = @{
         Accept = "application/vnd.github+json"
-        "User-Agent" = "BluetoothHandsFreeToggle-WinGet-Publisher"
+        "User-Agent" = "StereoKeeper-WinGet-Publisher"
         "X-GitHub-Api-Version" = "2022-11-28"
     }
 
@@ -210,7 +212,7 @@ function Get-InstallerSha256 {
     }
 
     $temporaryFile = Join-Path ([IO.Path]::GetTempPath()) (
-        "bhft-winget-" + [Guid]::NewGuid().ToString("N") + ".exe")
+        "stereokeeper-winget-" + [Guid]::NewGuid().ToString("N") + ".exe")
 
     try {
         Write-Host "Downloading $($InstallerEntry.Name) to calculate SHA-256..."

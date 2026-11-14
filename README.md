@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="BluetoothHandsFreeToggle/Assets/AppIcon.png" width="168" alt="BluetoothHandsFreeToggle Windows Bluetooth audio fix logo">
+  <img src="StereoKeeper/Assets/AppIcon.png" width="168" alt="StereoKeeper logo: headphones that stay in stereo on Windows">
 </p>
 
-<h1 align="center">BluetoothHandsFreeToggle</h1>
+<h1 align="center">StereoKeeper</h1>
+
+<p align="center"><sub>Formerly BluetoothHandsFreeToggle</sub></p>
 
 <p align="center">
   <strong>Fix low-quality Bluetooth headset audio and stuck Hands-Free mode on Windows 10 and Windows 11.</strong>
@@ -13,17 +15,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest">
-    <img src="https://img.shields.io/github/v/release/Avazbek22/BluetoothHandsFreeToggle?style=flat-square&color=2ea043&label=release" alt="Latest release">
+  <a href="https://github.com/Avazbek22/StereoKeeper/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Avazbek22/StereoKeeper?style=flat-square&color=2ea043&label=release" alt="Latest release">
   </a>
-  <a href="https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases">
-    <img src="https://img.shields.io/github/downloads/Avazbek22/BluetoothHandsFreeToggle/total?style=flat-square&color=0078d4" alt="Total downloads">
+  <a href="https://github.com/Avazbek22/StereoKeeper/releases">
+    <img src="https://img.shields.io/github/downloads/Avazbek22/StereoKeeper/total?style=flat-square&color=0078d4" alt="Total downloads">
   </a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10">
   <img src="https://img.shields.io/badge/languages-30-EF2D5E?style=flat-square" alt="30 interface languages">
-  <img src="https://img.shields.io/github/license/Avazbek22/BluetoothHandsFreeToggle?style=flat-square" alt="MIT license">
-  <img src="https://img.shields.io/github/repo-size/Avazbek22/BluetoothHandsFreeToggle?style=flat-square" alt="Repository size">
+  <img src="https://img.shields.io/github/license/Avazbek22/StereoKeeper?style=flat-square" alt="MIT license">
+  <img src="https://img.shields.io/github/repo-size/Avazbek22/StereoKeeper?style=flat-square" alt="Repository size">
 </p>
 
 <p align="center">
@@ -42,7 +44,7 @@
 
 > **Call of Duty, Warzone, Discord, or another game opened your Bluetooth microphone—and now the whole game sounds muffled, compressed, or mono?**
 
-BluetoothHandsFreeToggle is a free, open-source Windows tray app that fixes Bluetooth headphones stuck in mono, muffled "phone call" sound on Windows 10 and Windows 11. Windows switches headphones from high-quality A2DP stereo to the Hands-Free Profile (HFP) as soon as Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. The app shows when your headphones drop into call mode, names the app that took the microphone, and brings stereo back with one click. **Always stereo** keeps it that way if you use another microphone, and turning it off puts Windows back exactly as it was.
+StereoKeeper (formerly BluetoothHandsFreeToggle) is a free, open-source Windows tray app that fixes Bluetooth headphones stuck in mono, muffled "phone call" sound on Windows 10 and Windows 11. Windows switches headphones from high-quality A2DP stereo to the Hands-Free Profile (HFP) as soon as Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. The app shows when your headphones drop into call mode, names the app that took the microphone, and brings stereo back with one click. **Always stereo** keeps it that way if you use another microphone, and turning it off puts Windows back exactly as it was.
 
 ---
 
@@ -50,13 +52,13 @@ BluetoothHandsFreeToggle is a free, open-source Windows tray app that fixes Blue
 ## App demo 🎬
 
 <p align="center">
-  <img src=".github/assets/app-panel.png" width="900" alt="BluetoothHandsFreeToggle tray panel on Windows 11: Bluetooth headphones in call mode because Discord uses the microphone, stereo restored with one click, Always stereo turned on">
+  <img src=".github/assets/app-panel.png" width="900" alt="StereoKeeper tray panel on Windows 11: Bluetooth headphones in call mode because Discord uses the microphone, stereo restored with one click, Always stereo turned on">
 </p>
 
 Click the tray icon: the panel shows whether your headphones play in stereo or are stuck in call mode, which apps hold the headset microphone, and one button to bring stereo back.
 
 <p align="center">
-  <img src=".github/assets/app-screens.png" width="900" alt="BluetoothHandsFreeToggle bringing stereo back with live steps, settings with start with Windows, notifications and copy info for the developer, and the built-in help">
+  <img src=".github/assets/app-screens.png" width="900" alt="StereoKeeper bringing stereo back with live steps, settings with start with Windows, notifications and copy info for the developer, and the built-in help">
 </p>
 
 Every action shows what Windows is doing right now, settings are one click away, and the built-in help explains in plain words what each button changes and how to undo it.
@@ -67,15 +69,15 @@ Every action shows what Windows is doing right now, settings are one click away,
 ## Download 🚀
 
 **Latest GitHub release:**
-👉 [https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest)
+👉 [https://github.com/Avazbek22/StereoKeeper/releases/latest](https://github.com/Avazbek22/StereoKeeper/releases/latest)
 
-**Install via WinGet (Windows):** `winget install OlimoffDev.BluetoothHandsFreeToggle`
+**Install via WinGet (Windows):** `winget install OlimoffDev.BluetoothHandsFreeToggle`, then run `stereokeeper`. The package ID keeps the former name, so existing installations update as usual.
 
 ---
 
 <p align="center">
   <a href="https://boosty.to/avazbek22">
-    <img src=".github/assets/boosty-support.svg" width="800" alt="Support BluetoothHandsFreeToggle on Boosty">
+    <img src=".github/assets/boosty-support.svg" width="800" alt="Support StereoKeeper on Boosty">
   </a>
 </p>
 
@@ -142,7 +144,7 @@ On Windows 11, A2DP and HFP are exposed through unified audio endpoints, and Win
 
 ## Quick start
 
-1. Download `BluetoothHandsFreeToggle-v<version>-win-x64.exe` (or `win-arm64` for ARM PCs) from the [latest release](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest), or install it with WinGet.
+1. Download `StereoKeeper-v<version>-win-x64.exe` (or `win-arm64` for ARM PCs) from the [latest release](https://github.com/Avazbek22/StereoKeeper/releases/latest), or install it with WinGet.
 2. Run it. The icon appears in the Windows tray (check the hidden icons arrow and pin it to the taskbar if you like).
 3. Click the icon. If the headphones are in call mode, the panel names the app that is using the headset microphone: close it or choose another microphone in it.
 4. Click **Bring back stereo**. Windows asks for permission each time the app changes services: click **Yes**.
@@ -154,12 +156,12 @@ After an operation, reconnect the headset or restart audio playback if a game ca
 Settings (the gear in the panel) let you start the app with Windows, turn notifications on or off, and pick a language. They are stored in:
 
 ```text
-%AppData%\BluetoothHandsFreeToggle\
+%AppData%\StereoKeeper\
 ```
 
 ## Languages
 
-On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI language preferences and selects the first supported match. Regional fallbacks are handled deliberately: Traditional and Simplified Chinese stay separate, Spanish distinguishes Spain and Latin America, Portuguese distinguishes Brazil and Portugal, and Norwegian variants resolve to Bokmål. Pick another language in the panel's settings; the choice is remembered for future runs.
+On the first run, StereoKeeper checks the ordered Windows UI language preferences and selects the first supported match. Regional fallbacks are handled deliberately: Traditional and Simplified Chinese stay separate, Spanish distinguishes Spain and Latin America, Portuguese distinguishes Brazil and Portugal, and Norwegian variants resolve to Bokmål. Pick another language in the panel's settings; the choice is remembered for future runs.
 
 | | Supported interface languages |
 |:--|:--|
@@ -207,7 +209,7 @@ Turn it off again. The saved state is intentionally kept until every supported s
 
 ### The panel does not open
 
-Windows shows a message with the reason and the log location instead of the panel. If Always stereo is on at that moment, the same message offers to put Windows back as it was, so the headset microphone never stays switched off. Attach the log from `%LocalAppData%\BluetoothHandsFreeToggle\logs\app.log` to your [issue report](https://github.com/Avazbek22/BluetoothHandsFreeToggle/issues/new).
+Windows shows a message with the reason and the log location instead of the panel. If Always stereo is on at that moment, the same message offers to put Windows back as it was, so the headset microphone never stays switched off. Attach the log from `%LocalAppData%\StereoKeeper\logs\app.log` to your [issue report](https://github.com/Avazbek22/StereoKeeper/issues/new).
 
 ## Safety and recovery
 
@@ -216,6 +218,8 @@ Before Always stereo changes service configuration, the original state is stored
 ```text
 %ProgramData%\BluetoothHandsFreeToggle\backup.json
 ```
+
+The folder keeps the app's former name on purpose: a state saved by version 2.x is still found and restored.
 
 Recovery behavior is intentionally conservative:
 
@@ -232,7 +236,7 @@ Recovery behavior is intentionally conservative:
 
 ### Hung service recovery
 
-Windows sometimes leaves an HFP service hung in the *Stopping* state. The Service Control Manager then rejects every further start or stop request until the service's process exits, which normally means a reboot. BluetoothHandsFreeToggle detects this case and resolves it safely:
+Windows sometimes leaves an HFP service hung in the *Stopping* state. The Service Control Manager then rejects every further start or stop request until the service's process exits, which normally means a reboot. StereoKeeper detects this case and resolves it safely:
 
 - Transitions are tracked with the service's own checkpoint and wait hint, the way the SCM protocol intends. A slow service that keeps reporting progress is never treated as hung.
 - A service is considered hung only after it stops reporting progress for its declared wait hint (clamped to 5–15 seconds).
@@ -301,7 +305,7 @@ Bring back stereo changes nothing permanently. Always stereo is the only setting
 2. In the panel's settings, turn off **Start with Windows**.
 3. Quit the app and uninstall it (Settings → Apps, `winget uninstall`, or delete the file if you downloaded it yourself).
 
-Do step 1 before uninstalling: once removed, the app can no longer restore the headset microphone. Only the app's settings in `%AppData%\BluetoothHandsFreeToggle` and its log in `%LocalAppData%\BluetoothHandsFreeToggle` remain; you can delete those folders.
+Do step 1 before uninstalling: once removed, the app can no longer restore the headset microphone. Only the app's settings in `%AppData%\StereoKeeper` and its log in `%LocalAppData%\StereoKeeper` remain (after an update from 2.x, also `%AppData%\BluetoothHandsFreeToggle`); you can delete those folders.
 
 ### Does it work with AirPods, Sony, Bose, JBL, or my gaming headset?
 
@@ -315,6 +319,10 @@ That manual workaround switches HFP off for one paired device and has to be undo
 
 Showing the status needs no special rights. Windows asks for permission only when you click Bring back stereo or flip Always stereo; that part runs in a separate short-lived process. The app installs no service or driver, and it starts with Windows only if you turn that on in Settings.
 
+### Why is it called StereoKeeper now?
+
+Up to version 2.2 the app was called BluetoothHandsFreeToggle. Version 3.0 renamed it to StereoKeeper: the name says what the app does, keeps your headphones in stereo, and leaves out the Bluetooth trademark. Old GitHub links redirect here, the WinGet package ID `OlimoffDev.BluetoothHandsFreeToggle` stays the same, and the Windows state saved by Hard mode in 2.x is still restored when you turn Always stereo off.
+
 ### Do I need to install .NET?
 
 No. The official `win-x64` release is a self-contained single executable. The .NET 10 SDK is required only when building the project from source.
@@ -324,14 +332,14 @@ No. The official `win-x64` release is a self-contained single executable. The .N
 The codebase keeps Windows-specific operations separate from recovery logic:
 
 ```text
-BluetoothHandsFreeToggle/
+StereoKeeper/
 ├── App/            Startup, single instance, elevated worker, and crash log
 ├── Core/           Stereo restart, Always stereo, restore, status, and backup logic
 ├── Gui/            Tray icon, panel, and notifications (Avalonia)
 ├── Localization/   30-language resources and smart culture matching
 └── Windows/        Service Control Manager and Core Audio integration
 
-BluetoothHandsFreeToggle.Tests/
+StereoKeeper.Tests/
 └── Unit and headless UI tests for state transitions, backups, failures, the panel, and localization
 ```
 
@@ -346,8 +354,8 @@ Requirements:
 - Git.
 
 ```powershell
-git clone https://github.com/Avazbek22/BluetoothHandsFreeToggle.git
-cd BluetoothHandsFreeToggle
+git clone https://github.com/Avazbek22/StereoKeeper.git
+cd StereoKeeper
 
 dotnet restore
 dotnet build --configuration Release --no-restore
@@ -361,7 +369,14 @@ Create verified release artifacts for `win-x64` and `win-arm64`:
 ```
 
 The release script requires a clean `master` branch synchronized with `origin/master`,
-runs all tests, publishes both architectures, and generates SHA-256 checksums. For a
+runs all tests, publishes both architectures, and generates SHA-256 checksums. Release
+notes live in `docs/release-notes/v<version>.md`; the script stops if they are missing.
+To also create the tag and the GitHub release with the files and those notes (GitHub CLI
+signed in), add `-CreateGitHubRelease`, and `-Draft` to review it before publishing:
+
+```powershell
+.\scripts\Publish-Release.ps1 -CreateGitHubRelease -Draft
+``` For a
 local packaging test from another branch or a dirty working tree:
 
 ```powershell
@@ -388,11 +403,11 @@ This produces x64/Arm64 manifests plus localized metadata for all 30 interface l
 
 ## Support the project
 
-BluetoothHandsFreeToggle is free and open source. If it saved your game night, stream, meeting, or debugging session, consider supporting continued development and testing:
+StereoKeeper is free and open source. If it saved your game night, stream, meeting, or debugging session, consider supporting continued development and testing:
 
 <p align="center">
   <a href="https://boosty.to/avazbek22">
-    <img src=".github/assets/boosty-support.svg" width="800" alt="Support BluetoothHandsFreeToggle on Boosty">
+    <img src=".github/assets/boosty-support.svg" width="800" alt="Support StereoKeeper on Boosty">
   </a>
 </p>
 
@@ -400,8 +415,8 @@ BluetoothHandsFreeToggle is free and open source. If it saved your game night, s
 
 Bug reports, reproducible Windows/Bluetooth edge cases, and focused pull requests are welcome. The quickest way to report a problem: open Settings, click **Copy info for the developer**, and paste the result into a new issue together with your headset model and the app that triggered call mode.
 
-- [Open an issue](https://github.com/Avazbek22/BluetoothHandsFreeToggle/issues/new)
-- [View the source](https://github.com/Avazbek22/BluetoothHandsFreeToggle)
+- [Open an issue](https://github.com/Avazbek22/StereoKeeper/issues/new)
+- [View the source](https://github.com/Avazbek22/StereoKeeper)
 
 ## License
 
