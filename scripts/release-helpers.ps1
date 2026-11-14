@@ -97,5 +97,5 @@ function Get-ReleaseArtifactName {
         [string]$RuntimeIdentifier
     )
 
-    return "BluetoothHandsFreeToggle-v$DisplayVersion-$RuntimeIdentifier.exe"
+    return "StereoKeeper-v$DisplayVersion-$RuntimeIdentifier.exe"
 }

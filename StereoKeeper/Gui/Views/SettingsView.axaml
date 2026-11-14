@@ -1,0 +1,165 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StereoKeeper.Gui.ViewModels"
+             xmlns:c="using:StereoKeeper.Gui.Controls"
+             x:Class="StereoKeeper.Gui.Views.SettingsView"
+             x:DataType="vm:FlyoutViewModel">
+
+    <Grid RowDefinitions="Auto,*" Margin="16">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Height="36">
+            <Button Name="BackButton" Theme="{StaticResource IconButton}" Foreground="{StaticResource TextBrush}"
+                    Command="{Binding BackCommand}"
+                    ToolTip.Tip="{Binding L.Back}"
+                    AutomationProperties.Name="{Binding L.Back}">
+                <c:StrokeIcon Data="{x:Static c:Icons.ArrowLeft}" Size="18" />
+            </Button>
+            <TextBlock Grid.Column="1" Classes="display" Text="{Binding L.Settings}" FontSize="16" LineHeight="22"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Margin="0,16,-14,0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16" Margin="0,0,14,0">
+
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="section" Margin="4,0,0,0" Text="{Binding L.General}" />
+                    <Border Classes="card">
+                        <StackPanel>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="label" Text="{Binding L.Autostart}" />
+                                    <TextBlock Classes="caption" Text="{Binding L.AutostartDescription}" />
+                                </StackPanel>
+                                <c:PillSwitch Grid.Column="1" Name="AutostartSwitch" VerticalAlignment="Center"
+                                              IsChecked="{Binding AutostartEnabled}"
+                                              AutomationProperties.Name="{Binding L.Autostart}" />
+                            </Grid>
+                            <Border Classes="divider" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="label" Text="{Binding L.Language}" />
+                                    <TextBlock Classes="caption" Text="{Binding L.LanguageDescription}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Name="LanguageButton" Theme="{StaticResource PillButton}"
+                                        Height="32" CornerRadius="8" Padding="12,0,8,0" FontSize="13"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.Name="{Binding L.Language}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{Binding CurrentLanguageName}" VerticalAlignment="Center" />
+                                        <c:StrokeIcon Data="{x:Static c:Icons.ChevronDown}" Size="16" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <Button.Flyout>
+                                        <Flyout Placement="BottomEdgeAlignedRight" ShowMode="Standard">
+                                            <ListBox Name="LanguageList" Classes="menu" ItemsSource="{Binding Languages}"
+                                                     MaxHeight="340" Width="232" Background="Transparent"
+                                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:LanguageOption">
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                            <TextBlock Text="{Binding NativeName}" FontSize="13"
+                                                                       VerticalAlignment="Center" />
+                                                            <c:StrokeIcon Grid.Column="1" Data="{x:Static c:Icons.Check}" Size="14"
+                                                                          Foreground="{StaticResource GreenBrush}"
+                                                                          IsVisible="{Binding IsCurrent}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="section" Margin="4,0,0,0" Text="{Binding L.Notifications}" />
+                    <Border Classes="card">
+                        <StackPanel>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="label" Text="{Binding L.NotifyCall}" />
+                                    <TextBlock Classes="caption" Text="{Binding L.NotifyCallDescription}" />
+                                </StackPanel>
+                                <c:PillSwitch Grid.Column="1" Name="NotifyCallSwitch" VerticalAlignment="Center"
+                                              IsChecked="{Binding NotifyCallMode}"
+                                              AutomationProperties.Name="{Binding L.NotifyCall}" />
+                            </Grid>
+                            <Border Classes="divider" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="12">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="label" Text="{Binding L.NotifyMic}" />
+                                    <TextBlock Classes="caption" Text="{Binding L.NotifyMicDescription}" />
+                                </StackPanel>
+                                <c:PillSwitch Grid.Column="1" Name="NotifyMicSwitch" VerticalAlignment="Center"
+                                              IsChecked="{Binding NotifyMicrophone}"
+                                              AutomationProperties.Name="{Binding L.NotifyMic}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="section" Margin="4,0,0,0" Text="{Binding L.About}" />
+                    <Border Classes="card" Padding="4">
+                        <StackPanel>
+                            <Grid ColumnDefinitions="*,Auto" Height="44" Margin="8,0">
+                                <TextBlock Classes="label" Text="{Binding L.VersionLabel}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding L.VersionNumber}" VerticalAlignment="Center"
+                                           Foreground="{StaticResource SubBrush}" />
+                            </Grid>
+                            <Button Name="SettingsHelpButton" Theme="{StaticResource RowButton}" Command="{Binding ShowHelpCommand}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Book}" Size="16" StrokeThickness="1.9"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding L.Help}" FontSize="14" VerticalAlignment="Center" />
+                                    <c:StrokeIcon Grid.Column="2" Data="{x:Static c:Icons.ChevronRight}" Size="16"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Name="DiagnosticsButton" Theme="{StaticResource RowButton}"
+                                    Command="{Binding CopyDiagnosticsCommand}"
+                                    IsVisible="{Binding CanCopyDiagnostics}"
+                                    AutomationProperties.Name="{Binding L.Diagnostics}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,8">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Copy}" Size="16" StrokeThickness="1.9"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DiagnosticsText}" FontSize="14" TextWrapping="Wrap" />
+                                        <TextBlock Classes="caption" Text="{Binding L.DiagnosticsDescription}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                            <Button Theme="{StaticResource RowButton}" Command="{Binding OpenSourceCommand}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.External}" Size="16" StrokeThickness="1.9"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding L.SourceCode}" FontSize="14" VerticalAlignment="Center" />
+                                    <c:StrokeIcon Grid.Column="2" Data="{x:Static c:Icons.ChevronRight}" Size="16"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Theme="{StaticResource RowButton}" Command="{Binding OpenSupportCommand}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Heart}" Size="16"
+                                                  Foreground="{StaticResource AccentTextBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding L.SupportProject}" FontSize="14" VerticalAlignment="Center" />
+                                    <c:StrokeIcon Grid.Column="2" Data="{x:Static c:Icons.ChevronRight}" Size="16"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Name="QuitButton" Theme="{StaticResource RowButton}" Command="{Binding QuitCommand}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                    <c:StrokeIcon Data="{x:Static c:Icons.Power}" Size="16" StrokeThickness="1.9"
+                                                  Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding L.Quit}" FontSize="14" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

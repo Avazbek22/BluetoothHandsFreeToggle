@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StereoKeeper.Gui.ViewModels"
+             xmlns:c="using:StereoKeeper.Gui.Controls"
+             x:Class="StereoKeeper.Gui.Views.HelpView"
+             x:DataType="vm:FlyoutViewModel">
+
+    <UserControl.Styles>
+        <!-- Technical details: no card fill and a muted heading, so the plain answers stand out. -->
+        <Style Selector="Border.card.aside">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="TextBlock.label.aside">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*" Margin="16">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Height="36">
+            <Button Name="HelpBackButton" Theme="{StaticResource IconButton}" Foreground="{StaticResource TextBrush}"
+                    Command="{Binding BackCommand}"
+                    ToolTip.Tip="{Binding L.Back}"
+                    AutomationProperties.Name="{Binding L.Back}">
+                <c:StrokeIcon Data="{x:Static c:Icons.ArrowLeft}" Size="18" />
+            </Button>
+            <TextBlock Grid.Column="1" Classes="display" Text="{Binding L.HelpTitle}" FontSize="16" LineHeight="22"
+                       VerticalAlignment="Center" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" Margin="0,16,-14,0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="12" Margin="0,0,14,0">
+                <ItemsControl ItemsSource="{Binding L.HelpSections}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HelpSection">
+                            <Border Classes="card" Classes.aside="{Binding IsAside}" Padding="12">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="label" Classes.aside="{Binding IsAside}" Text="{Binding Title}" />
+                                    <TextBlock Text="{Binding Body}" FontSize="13" LineHeight="19"
+                                               Foreground="{StaticResource SubBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Theme="{StaticResource PillButton}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                        Command="{Binding OpenSourceCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <c:StrokeIcon Data="{x:Static c:Icons.External}" Size="13" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding L.SourceCode}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
