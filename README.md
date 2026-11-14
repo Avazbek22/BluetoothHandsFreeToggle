@@ -27,7 +27,7 @@
   <a href="#app-demo">Demo</a> •
   <a href="#download">Download</a> •
   <a href="#typical-use-cases">Use cases</a> •
-  <a href="#choose-your-mode">Modes</a> •
+  <a href="#what-the-buttons-do">Buttons</a> •
   <a href="#quick-start">Quick start</a> •
   <a href="#languages">Languages</a> •
   <a href="#troubleshooting-playbook">Troubleshooting</a> •
@@ -39,7 +39,7 @@
 
 > **Call of Duty, Warzone, Discord, or another game opened your Bluetooth microphone—and now the whole game sounds muffled, compressed, or mono?**
 
-BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-quality Bluetooth headset audio caused by the Hands-Free Profile (HFP). Windows can switch gaming headphones from high-quality A2DP stereo to HFP call audio when Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. This tool provides a safe Soft reset and a reliable Hard mode for restoring clear stereo game audio.
+BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-quality Bluetooth headset audio caused by the Hands-Free Profile (HFP). Windows can switch gaming headphones from high-quality A2DP stereo to HFP call audio when Call of Duty voice chat, Discord, a browser, or recording software opens the headset microphone—and sometimes fails to switch back. The app sits in the Windows tray, shows when your headphones drop into call mode, names the app that took the microphone, and brings stereo back with one click. **Always stereo** keeps it that way if you use another microphone.
 
 ---
 
@@ -47,10 +47,10 @@ BluetoothHandsFreeToggle is a free, open-source Windows utility for fixing low-q
 ## App demo 🎬
 
 <p align="center">
-  <img src=".github/assets/app-demo.gif" alt="BluetoothHandsFreeToggle console demo: get status, Soft reset, Hard mode, restore the original HFP service state">
+  <img src=".github/assets/app-panel.png" width="900" alt="BluetoothHandsFreeToggle tray panel: headphones in call mode, stereo restored, Always stereo turned on">
 </p>
 
-Check the HFP services, run a **Soft reset**, switch to **Hard mode** for high-quality stereo, then **Restore** the exact saved service state.
+Click the tray icon: the panel shows whether your headphones play in stereo or are stuck in call mode, which apps hold the headset microphone, and one button to bring stereo back.
 
 ---
 
@@ -74,18 +74,19 @@ Check the HFP services, run a **Soft reset**, switch to **Hard mode** for high-q
 
 | 🎮 Game-friendly | 🛡️ Recoverable | ⚡ Fast |
 |:---|:---|:---|
-| Fix audio left in call mode after games, voice chat, or capture software. | Hard mode backs up the original Windows service state before changing anything. | Download one self-contained `.exe`; no installer or separate .NET runtime is required. |
+| Fix audio left in call mode after games, voice chat, or capture software. | Always stereo saves the original Windows service state before changing anything and puts it back exactly. | Download one self-contained `.exe`; no installer or separate .NET runtime is required. |
 
 Additional highlights:
 
-- Interactive menu for quick recovery.
-- Soft mode preserves headset microphone availability.
-- Microphone diagnostics name the apps that keep the headset in call mode (for example, "Discord is using the headset microphone") and warn when the headset is the default Windows microphone.
-- Hard mode prioritizes high-quality playback.
-- Restore returns the exact saved service startup and running state.
-- Final state verification after every operation.
+- Lives in the tray: the dot on the icon shows stereo, call mode, or Always stereo at a glance.
+- **Bring back stereo** keeps the headset microphone working.
+- The panel names the apps that keep the headset in call mode (for example, "Discord is using the headphone microphone") and warns when the headset is the default Windows microphone.
+- Optional Windows notifications when the headphones switch to call mode.
+- **Always stereo** blocks call mode for reliable high-quality playback.
+- Turning Always stereo off returns the exact saved service startup and running state.
+- Final state verification after every operation, with a report you can copy for the developer.
 - 30-language interface with smart Windows language detection and a saved manual choice.
-- Built-in help, status reporting, and safe handling of partial failures.
+- Built-in help and safe handling of partial failures.
 
 ## Typical use cases
 
@@ -93,73 +94,61 @@ Additional highlights:
 
 You launch Call of Duty, enter a Warzone match, or enable voice chat in a Black Ops multiplayer lobby. Windows activates the headset microphone, switches from A2DP stereo to HFP call mode, and gunfire, footsteps, music, and spatial audio suddenly sound thin or muffled.
 
-Close or disable the in-game Bluetooth microphone first, then use **Soft reset**. If you use a laptop, USB, or standalone microphone and only need the headset for playback, **Hard mode** prevents Windows from selecting Bluetooth HFP again.
+Close or disable the in-game Bluetooth microphone first, then click **Bring back stereo**. If you use a laptop, USB, or standalone microphone and only need the headset for playback, turn on **Always stereo** so Windows cannot select Bluetooth HFP again.
 
 ### The game closed, but the headset is still stuck in Hands-Free mode
 
-Some games and communication apps release the microphone without Windows restoring the original stereo route. Soft reset restarts the active HFP service without changing its startup configuration and can release that stuck call session.
+Some games and communication apps release the microphone without Windows restoring the original stereo route. **Bring back stereo** restarts the active HFP service without changing its startup configuration and can release that stuck call session.
 
 ### Discord and a game are fighting over the headset
 
-Running Discord, Steam Chat, Xbox Game Bar, or in-game voice chat alongside a game can keep the Bluetooth microphone active. Select a laptop or USB microphone in the voice application, then reset HFP to recover high-quality game audio.
+Running Discord, Steam Chat, Xbox Game Bar, or in-game voice chat alongside a game can keep the Bluetooth microphone active. The panel shows which app it is. Select a laptop or USB microphone in that app, then click **Bring back stereo** to recover high-quality game audio.
 
 ### Streaming or recording software triggered low-quality sound
 
-OBS, NVIDIA ShadowPlay, browser recording tools, and other capture software may open the default headset microphone. After changing their input device or stopping capture, use Soft reset to return to stereo playback.
+OBS, NVIDIA ShadowPlay, browser recording tools, and other capture software may open the default headset microphone. After changing their input device or stopping capture, click **Bring back stereo** to return to stereo playback.
 
 ### You want maximum game audio quality and use a separate microphone
 
-Hard mode is designed for this setup. It disables Bluetooth Classic HFP system-wide, forcing Windows to prioritize high-quality A2DP playback. Restore the previous HFP configuration later; if HFP was enabled before Hard mode, the headset microphone becomes available again.
+**Always stereo** is designed for this setup. It disables Bluetooth Classic HFP system-wide, forcing Windows to prioritize high-quality A2DP playback. Turn it off later to return the previous HFP configuration; if HFP was enabled before, the headset microphone becomes available again.
 
-## Choose your mode
+<a id="what-the-buttons-do"></a>
+## What the buttons do
 
-| Mode | What it does | Headset microphone | Best used when |
+| Control | What it does | Headset microphone | Best used when |
 |:---|:---|:---:|:---|
-| **Status** | Reads supported HFP services and backup state, and shows which apps are using the headset microphone, without changing anything. | Available | You want to inspect the current state or diagnose a problem. |
-| **Soft reset** | Restarts only active HFP services without changing their startup type, and recovers an HFP service stuck in the Stopping state. | Preserved | A game or voice app released the microphone, but Windows stayed in call mode. |
-| **Hard mode** | Stops and disables Bluetooth Classic HFP system-wide after saving the original state. | Disabled | You need reliable stereo playback now and can use another microphone—or no microphone. |
-| **Restore** | Exactly restores the startup and Running/Stopped state saved by Hard mode. Without a backup, it uses `Manual + Running` recovery defaults. | Previous state | You want to leave Hard mode and return to the prior configuration. |
+| **Tray icon and panel** | Reads the supported HFP services and shows which apps are using the headset microphone, without changing anything. | Available | You want to see the current state or find the app that switched the headset to call mode. |
+| **Bring back stereo** | Restarts only active HFP services without changing their startup type, and recovers an HFP service stuck in the Stopping state. | Preserved | A game or voice app released the microphone, but Windows stayed in call mode. |
+| **Always stereo: on** | Stops and disables Bluetooth Classic HFP system-wide after saving the original state. | Disabled | You need reliable stereo playback and can use another microphone—or no microphone. |
+| **Always stereo: off** | Exactly restores the startup and Running/Stopped state saved when it was turned on. Without a saved state, it uses `Manual + Running` recovery defaults. | Previous state | You want the headset microphone back and Windows as it was before. |
+
+The caption under the switch always says which case you are in: **Off** means Windows is set up exactly as without the app; **On** means the headset microphone is off until you turn the switch off.
 
 > [!IMPORTANT]
-> Bluetooth Classic cannot provide A2DP-quality stereo playback while the headset's HFP microphone is actively in use. Soft reset can clear a **stuck** HFP session, but it cannot bypass this Bluetooth limitation. Hard mode solves the quality problem by disabling HFP, which also disables the Bluetooth headset microphone.
+> Bluetooth Classic cannot provide A2DP-quality stereo playback while the headset's HFP microphone is actively in use. Bring back stereo can clear a **stuck** HFP session, but it cannot bypass this Bluetooth limitation. Always stereo solves the quality problem by disabling HFP, which also disables the Bluetooth headset microphone.
 
 On Windows 11, A2DP and HFP are exposed through unified audio endpoints, and Windows automatically selects HFP when an application opens the headset microphone. For the platform details, see [Microsoft's Bluetooth Classic Audio documentation](https://learn.microsoft.com/windows-hardware/drivers/bluetooth/bluetooth-classic-audio).
 
 ## Quick start
 
-1. Download `BluetoothHandsFreeToggle.exe` from the [latest release](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest).
-2. Close Call of Duty, Warzone, Discord, browsers, OBS, recording tools, and other applications that may be using the headset microphone.
-3. Run the executable. Interactive mode requests Administrator access once; canceling UAC leaves status-only functionality available.
-4. Start with **`[2] Soft reset`**.
-5. If Windows immediately returns to low-quality audio, check the report: it names every app that is still using the headset microphone.
-6. Use **`[3] Hard mode`** when you want to prioritize playback quality completely.
-7. Use **`[4] Restore`** to leave Hard mode and return the previous HFP service state.
+1. Download `BluetoothHandsFreeToggle.exe` from the [latest release](https://github.com/Avazbek22/BluetoothHandsFreeToggle/releases/latest) or install it with WinGet.
+2. Run it. The icon appears in the Windows tray (check the hidden icons arrow and pin it to the taskbar if you like).
+3. Click the icon. If the headphones are in call mode, the panel names the app that is using the headset microphone: close it or choose another microphone in it.
+4. Click **Bring back stereo**. Windows asks for permission each time the app changes services: click **Yes**.
+5. If you do not need the headset microphone, turn on **Always stereo**.
+6. Turn **Always stereo** off at any time to put everything back exactly as it was.
 
 After an operation, reconnect the headset or restart audio playback if a game cached the previous Windows audio route.
 
-### Interactive menu
+Settings (the gear in the panel) let you start the app with Windows, turn notifications on or off, and pick a language. They are stored in:
 
 ```text
-[1] Get status
-[2] Soft reset
-[3] Hard mode
-[4] Restore
-[5] Help
-[6] About
-[7] Change language
-[8] Support the project (Boosty)
-[0] Exit
-```
-
-The selected application language is stored in:
-
-```text
-%AppData%\BluetoothHandsFreeToggle\ui-settings.json
+%AppData%\BluetoothHandsFreeToggle\
 ```
 
 ## Languages
 
-On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI language preferences and selects the first supported match. Regional fallbacks are handled deliberately: Traditional and Simplified Chinese stay separate, Spanish distinguishes Spain and Latin America, Portuguese distinguishes Brazil and Portugal, and Norwegian variants resolve to Bokmål. **Change language** opens the complete numbered list, and the selected language is remembered for future runs.
+On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI language preferences and selects the first supported match. Regional fallbacks are handled deliberately: Traditional and Simplified Chinese stay separate, Spanish distinguishes Spain and Latin America, Portuguese distinguishes Brazil and Portugal, and Norwegian variants resolve to Bokmål. Pick another language in the panel's settings; the choice is remembered for future runs.
 
 | | Supported interface languages |
 |:--|:--|
@@ -176,38 +165,38 @@ On the first run, BluetoothHandsFreeToggle checks the ordered Windows UI languag
 
 1. Disable in-game voice chat or select a laptop/USB microphone in the Call of Duty audio settings.
 2. Close any lobby, overlay, or background voice application still using the Bluetooth microphone.
-3. Run **Soft reset**.
+3. Click **Bring back stereo**.
 4. Restart the game audio or reconnect the headset if the old route was cached.
-5. If you do not need the headset microphone, use **Hard mode** for reliable A2DP playback.
+5. If you do not need the headset microphone, turn on **Always stereo** for reliable A2DP playback.
 
 ### Audio became bad after voice chat
 
 1. Exit every app that might be capturing the Bluetooth microphone.
-2. Run **Soft reset**.
+2. Click **Bring back stereo**.
 3. Restart playback or reconnect the headset if necessary.
 
 ### Audio becomes bad again immediately
 
-An application is probably still opening the HFP microphone. **Status** and **Soft reset** name every app that is recording from the headset microphone right now. Also check:
+An application is probably still opening the HFP microphone. The panel names every app that is recording from the headset microphone right now. Also check:
 
 - In-game voice chat and microphone settings.
 - Discord, Steam Chat, Teams, or another communication app.
 - OBS, ShadowPlay, audio recorders, browser permissions, and background tabs.
 - The selected input device in Windows and each running application.
 
-Disable microphone access in that application, select a laptop/USB microphone, or use **Hard mode**.
+Disable microphone access in that application, select a laptop/USB microphone, or turn on **Always stereo**.
 
 ### I need the headset microphone again
 
-Run **Restore**. It returns the service configuration saved before Hard mode. If no backup exists, the tool uses conservative recovery defaults: `Manual + Running`.
+Turn **Always stereo** off. It returns the service configuration saved when you turned it on. If no saved state exists, the app uses conservative recovery defaults: `Manual + Running`.
 
-### Restore only completed partially
+### Turning Always stereo off only completed partially
 
-Run Restore again. The backup is intentionally kept until every supported service has been successfully restored and verified.
+Turn it off again. The saved state is intentionally kept until every supported service has been successfully restored and verified.
 
 ## Safety and recovery
 
-Before Hard mode changes service configuration, the original state is stored in:
+Before Always stereo changes service configuration, the original state is stored in:
 
 ```text
 %ProgramData%\BluetoothHandsFreeToggle\backup.json
@@ -215,15 +204,15 @@ Before Hard mode changes service configuration, the original state is stored in:
 
 Recovery behavior is intentionally conservative:
 
-- If a backup cannot be created, Hard mode makes no service changes.
-- Repeated Hard mode runs preserve the first original-state backup.
+- If a backup cannot be created, Always stereo makes no service changes.
+- Turning Always stereo on again preserves the first original-state backup.
 - Backups are written atomically through a temporary file and stored with a protected Windows ACL.
-- Partial Restore attempts keep the backup for another retry.
-- A fully successful and verified Restore removes the backup.
+- Partial restore attempts keep the backup for another retry.
+- A fully successful and verified restore removes the backup.
 - A system-wide named mutex prevents concurrent operations in different Windows sessions from racing over services or backup state.
 - Every operation reads the final Windows service state and reports partial failures.
 - Live progress is shown while services stop and start, so a slow operation never looks frozen.
-- Hard mode disables HFP startup **before** stopping the service, so device triggers or SCM recovery actions cannot restart it midway.
+- Always stereo disables HFP startup **before** stopping the service, so device triggers or SCM recovery actions cannot restart it midway.
 
 ### Hung service recovery
 
@@ -235,11 +224,11 @@ Windows sometimes leaves an HFP service hung in the *Stopping* state. The Servic
   - the service is still pending in exactly that process;
   - the process hosts nothing but `BTAGService` / `BthHFSrv`;
   - the process image is `%SystemRoot%\System32\svchost.exe`.
-- A shared service host (common on PCs with less than 3.5 GB RAM), an unexpected host, or a failed termination is never forced. The tool explains why and asks for a Windows restart instead. Hard mode's Disabled startup still takes effect after that restart.
-- A service is force-recovered at most once per step. If it hangs again, the tool stops and asks for a restart instead of looping.
+- A shared service host (common on PCs with less than 3.5 GB RAM), an unexpected host, or a failed termination is never forced. The app explains why and asks for a Windows restart instead. Always stereo's Disabled startup still takes effect after that restart.
+- A service is force-recovered at most once per step. If it hangs again, the app stops and asks for a restart instead of looping.
 - Restore keeps its backup until the restored state is fully verified, including after a required restart.
 
-The tool uses the Windows Service Control Manager API. It does **not**:
+The app uses the Windows Service Control Manager API. It does **not**:
 
 - Uninstall or replace Bluetooth drivers.
 - Remove Bluetooth pairings.
@@ -257,14 +246,14 @@ The target list is intentionally small:
 | `BTAGService` | Bluetooth Audio Gateway used for HFP on many Windows 11 systems. |
 | `BthHFSrv` | Bluetooth Hands-Free service present on some Windows 10 systems. |
 
-Hard mode affects Bluetooth Classic HFP **system-wide**, not one selected headset. Bluetooth LE Audio and vendor-specific Bluetooth stacks may behave differently.
+Always stereo affects Bluetooth Classic HFP **system-wide**, not one selected headset. Bluetooth LE Audio and vendor-specific Bluetooth stacks may behave differently.
 
 ### Compatibility
 
 - Windows 10 or Windows 11.
 - Official release builds: self-contained single-file `win-x64` and `win-arm64`.
 - Bluetooth Classic headsets using A2DP/HFP.
-- Administrator access for Soft, Hard, and Restore operations.
+- Showing the status needs no special rights. Windows asks for administrator permission (UAC) each time the app changes services.
 
 ## Frequently asked questions
 
@@ -274,7 +263,7 @@ Call of Duty voice chat can open the Bluetooth headset microphone. On Bluetooth 
 
 ### Why is my Bluetooth headset still in Hands-Free mode after closing the game?
 
-The game, an overlay, Discord, or another background process may still hold the microphone open. Windows can also leave the HFP session stuck after the microphone is released. Close every microphone user and try Soft reset.
+The game, an overlay, Discord, or another background process may still hold the microphone open. Windows can also leave the HFP session stuck after the microphone is released. Close every microphone user and click Bring back stereo.
 
 ### Can I use the Bluetooth headset microphone and high-quality game audio simultaneously?
 
@@ -284,9 +273,19 @@ Not with the Bluetooth Classic A2DP/HFP combination. A2DP provides high-quality 
 
 It can fix audio that remains stuck in HFP after those applications stop using the headset microphone. If an application is still actively recording from the Bluetooth microphone, Windows will continue to require HFP until you change or disable that input.
 
-### Is Hard mode permanent?
+### Is Always stereo permanent?
 
-No. Hard mode stores the original service configuration first. Choose Restore from the menu to return the saved startup and running state.
+No. Always stereo stores the original service configuration first. Turn the switch off to return the saved startup and running state.
+
+### How do I put everything back as it was before the app?
+
+Bring back stereo changes nothing permanently. Always stereo is the only setting the app changes in Windows, so:
+
+1. Turn **Always stereo** off if it is on.
+2. In the panel's settings, turn off **Start with Windows**.
+3. Quit the app and uninstall it (Settings → Apps, `winget uninstall`, or delete the file if you downloaded it yourself).
+
+Do step 1 before uninstalling: once removed, the app can no longer restore the headset microphone. Only the app's settings in `%AppData%\BluetoothHandsFreeToggle` and its log in `%LocalAppData%\BluetoothHandsFreeToggle` remain; you can delete those folders.
 
 ### Do I need to install .NET?
 
@@ -298,14 +297,14 @@ The codebase keeps Windows-specific operations separate from recovery logic:
 
 ```text
 BluetoothHandsFreeToggle/
-├── App/            Application startup, elevation, and documentation
-├── Core/           Soft, Hard, Restore, status, and backup logic
+├── App/            Startup, single instance, elevated worker, and crash log
+├── Core/           Stereo restart, Always stereo, restore, status, and backup logic
+├── Gui/            Tray icon, panel, and notifications (Avalonia)
 ├── Localization/   30-language resources and smart culture matching
-├── UI/             Interactive console interface
-└── Windows/        Service Control Manager integration
+└── Windows/        Service Control Manager and Core Audio integration
 
 BluetoothHandsFreeToggle.Tests/
-└── Unit tests for state transitions, backups, failures, and localization
+└── Unit and headless UI tests for state transitions, backups, failures, the panel, and localization
 ```
 
 Quality safeguards include nullable reference types, recommended .NET analyzers, warnings treated as errors, final-state verification, and unit tests for recovery-critical paths.
