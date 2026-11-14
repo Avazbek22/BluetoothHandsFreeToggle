@@ -419,6 +419,12 @@ Bug reports, reproducible Windows/Bluetooth edge cases, and focused pull request
 - [Open an issue](https://github.com/Avazbek22/StereoKeeper/issues/new)
 - [View the source](https://github.com/Avazbek22/StereoKeeper)
 
+## Trademarks
+
+The Bluetooth® word mark and logos are registered trademarks owned by Bluetooth SIG, Inc. StereoKeeper is an independent open-source project: it is not affiliated with, endorsed by, or sponsored by Bluetooth SIG, and it claims no rights to these trademarks. The Bluetooth logo in the app icon only shows that the app works with Bluetooth headphones.
+
+Windows is a trademark of the Microsoft group of companies. Other product and company names mentioned here, such as Discord, Microsoft Teams, and Google Chrome, belong to their respective owners and are used only to describe compatibility.
+
 ## License
 
 Released under the [MIT License](LICENSE).
