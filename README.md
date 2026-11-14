@@ -24,8 +24,9 @@
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows 10 and 11">
   <img src="https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10">
   <img src="https://img.shields.io/badge/languages-30-EF2D5E?style=flat-square" alt="30 interface languages">
-  <img src="https://img.shields.io/github/license/Avazbek22/StereoKeeper?style=flat-square" alt="MIT license">
-  <img src="https://img.shields.io/github/repo-size/Avazbek22/StereoKeeper?style=flat-square" alt="Repository size">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license">
+  </a>
 </p>
 
 <p align="center">
