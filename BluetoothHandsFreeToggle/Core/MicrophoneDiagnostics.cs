@@ -37,6 +37,12 @@ public sealed record MicrophoneProbeResult(
     IReadOnlyList<CaptureClient> Clients,
     string? Error)
 {
+    /// <summary>
+    /// Names of the Bluetooth audio devices that are connected right now (they have an active
+    /// playback or recording endpoint), for example "HUAWEI FreeBuds Pro 4".
+    /// </summary>
+    public IReadOnlyList<string> Headsets { get; init; } = [];
+
     public static MicrophoneProbeResult Failed(string error) => new([], [], error);
 }
 
@@ -75,6 +81,9 @@ public sealed record MicrophoneDiagnosis(
     /// </summary>
     public CaptureDevice? DefaultBluetoothMicrophone
         => BluetoothMicrophones.FirstOrDefault(device => device.IsDefault || device.IsDefaultCommunications);
+
+    /// <summary>Connected Bluetooth audio devices, see <see cref="MicrophoneProbeResult.Headsets"/>.</summary>
+    public IReadOnlyList<string> Headsets { get; init; } = [];
 
     public static MicrophoneDiagnosis Unavailable(string error)
         => new(MicrophoneVerdict.Unavailable, [], [], [], error);
@@ -115,7 +124,10 @@ public static class MicrophoneDiagnostics
             bluetoothMicrophones,
             bluetoothApps,
             otherApps,
-            probe.Error);
+            probe.Error)
+        {
+            Headsets = probe.Headsets
+        };
     }
 
     private static List<MicrophoneApp> GroupByApp(

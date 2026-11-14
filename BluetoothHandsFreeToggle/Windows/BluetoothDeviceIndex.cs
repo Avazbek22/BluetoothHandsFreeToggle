@@ -19,26 +19,60 @@ internal static class BluetoothDeviceIndex
     private static readonly DevPropKey ContainerIdKey =
         new(new Guid("8C7ED206-3F8A-4827-B3AB-AE9E1FAEFC6C"), 2);
 
+    // DEVPKEY_NAME: the name Windows shows for the devnode in Settings and Device Manager.
+    private static readonly DevPropKey NameKey =
+        new(new Guid("B725F130-47EF-101A-A5F1-02608C9EEBAC"), 10);
+
     private const int CrSuccess = 0;
     private const int CrBufferSmall = 0x1A;
     private const int CmGetIdListFilterEnumerator = 0x1;
     private const int CmLocateDevnodeNormal = 0x0;
     private const int DevPropTypeGuid = 0xD;
+    private const int DevPropTypeString = 0x12;
 
     public static HashSet<Guid> GetBluetoothContainerIds()
+        => GetBluetoothContainers().Keys.ToHashSet();
+
+    /// <summary>
+    /// Maps every Bluetooth device container to the device's own name (for example
+    /// "HUAWEI FreeBuds Pro 4"), or <c>null</c> when Windows reports none.
+    /// </summary>
+    public static Dictionary<Guid, string?> GetBluetoothContainers()
     {
-        var containers = new HashSet<Guid>();
+        var containers = new Dictionary<Guid, string?>();
 
         foreach (var enumerator in BluetoothEnumerators)
         {
             foreach (var instanceId in GetDeviceIds(enumerator))
             {
-                if (TryGetContainerId(instanceId, out var containerId) && IsDeviceContainer(containerId))
-                    containers.Add(containerId);
+                if (!TryLocate(instanceId, out var devInst) ||
+                    !TryGetContainerId(devInst, out var containerId) ||
+                    !IsDeviceContainer(containerId))
+                {
+                    continue;
+                }
+
+                containers.TryAdd(containerId, null);
+
+                // Profile devnodes have names like "Headset Gateway" or "AVRCP Transport X"; only the
+                // device node itself (BTHENUM\DEV_<address>, BTHLE\DEV_<address>) carries the plain name.
+                if (containers[containerId] is null &&
+                    IsDeviceNode(instanceId) &&
+                    TryGetName(devInst) is { } name)
+                {
+                    containers[containerId] = name;
+                }
             }
         }
 
         return containers;
+    }
+
+    private static bool IsDeviceNode(string instanceId)
+    {
+        var separator = instanceId.IndexOf('\\', StringComparison.Ordinal);
+        return separator > 0 &&
+               instanceId.AsSpan(separator + 1).StartsWith("DEV_", StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool IsDeviceContainer(Guid containerId)
@@ -71,13 +105,31 @@ internal static class BluetoothDeviceIndex
         return [];
     }
 
-    private static bool TryGetContainerId(string instanceId, out Guid containerId)
+    // Only present devices can be located with CM_LOCATE_DEVNODE_NORMAL; absent ones are skipped.
+    private static bool TryLocate(string instanceId, out int devInst)
+        => CM_Locate_DevNode(out devInst, instanceId, CmLocateDevnodeNormal) == CrSuccess;
+
+    private static string? TryGetName(int devInst)
+    {
+        var buffer = new byte[512];
+        var size = buffer.Length;
+        var result = CM_Get_DevNode_Property(devInst, in NameKey, out var type, buffer, ref size, 0);
+        if (result == CrBufferSmall && size > buffer.Length)
+        {
+            buffer = new byte[size];
+            result = CM_Get_DevNode_Property(devInst, in NameKey, out type, buffer, ref size, 0);
+        }
+
+        if (result != CrSuccess || type != DevPropTypeString || size < 2)
+            return null;
+
+        var name = System.Text.Encoding.Unicode.GetString(buffer, 0, size).TrimEnd('\0').Trim();
+        return name.Length == 0 ? null : name;
+    }
+
+    private static bool TryGetContainerId(int devInst, out Guid containerId)
     {
         containerId = Guid.Empty;
-
-        // Only present devices can be located with CM_LOCATE_DEVNODE_NORMAL; absent ones are skipped.
-        if (CM_Locate_DevNode(out var devInst, instanceId, CmLocateDevnodeNormal) != CrSuccess)
-            return false;
 
         var buffer = new byte[16];
         var size = buffer.Length;

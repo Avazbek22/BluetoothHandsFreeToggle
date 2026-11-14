@@ -47,7 +47,7 @@ public sealed class ToggleEngineTests
         var report = engine.SoftResetHandsFree();
 
         Assert.False(report.Success);
-        Assert.Contains(report.Lines, line => line.Contains("Soft mode cannot", StringComparison.Ordinal));
+        Assert.Contains(report.Lines, line => line.Contains("cannot be restarted", StringComparison.Ordinal));
         Assert.Equal(0, services.StartCalls);
         Assert.Equal(0, services.SetStartTypeCalls);
     }
@@ -437,7 +437,7 @@ public sealed class ToggleEngineTests
 
         Assert.False(report.Success);
         Assert.True(report.RebootRequired);
-        Assert.Equal("SOFT RESET: RESTART REQUIRED", report.Title);
+        Assert.Equal("BRING BACK STEREO: RESTART REQUIRED", report.Title);
         Assert.Equal(0, services.ProcessesTerminated);
         Assert.Equal(0, services.StartCalls);
         Assert.Equal(ServiceStartType.Manual, services.Btag.StartType);
@@ -567,7 +567,7 @@ public sealed class ToggleEngineTests
         var report = engine.HardDisableHandsFree();
 
         Assert.True(report.RebootRequired);
-        Assert.Equal("HARD MODE: RESTART REQUIRED", report.Title);
+        Assert.Equal("ALWAYS STEREO: RESTART REQUIRED", report.Title);
         Assert.Equal(ServiceStartType.Disabled, services.Btag.StartType);
         Assert.NotNull(backup.Stored);
         Assert.DoesNotContain(report.Lines, line => line.StartsWith("[ERROR]", StringComparison.Ordinal));
@@ -648,7 +648,7 @@ public sealed class ToggleEngineTests
         var report = engine.RestoreHandsFree();
 
         Assert.True(report.RebootRequired);
-        Assert.Equal("RESTORE: RESTART REQUIRED", report.Title);
+        Assert.Equal("TURNING ALWAYS STEREO OFF: RESTART REQUIRED", report.Title);
         Assert.Equal(ServiceStartType.Manual, services.Btag.StartType);
         Assert.NotNull(backup.Stored);
         Assert.Equal(0, backup.DeleteCalls);

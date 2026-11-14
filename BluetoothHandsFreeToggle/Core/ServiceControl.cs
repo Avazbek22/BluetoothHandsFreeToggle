@@ -62,7 +62,7 @@ public sealed class ServiceControl
 
     public ServiceActionResult EnsureStopped(TargetService target)
     {
-        Report(OperationEventKind.Step, Text.Format("progress.stopping", target.FriendlyName));
+        Report(OperationEventKind.Step, Text.Format("progress.stopping", target.FriendlyName), OperationStep.Stopping, target);
         var session = new Session(target);
         var lastState = ServiceRunState.Unknown;
 
@@ -118,7 +118,7 @@ public sealed class ServiceControl
 
     public ServiceActionResult EnsureRunning(TargetService target)
     {
-        Report(OperationEventKind.Step, Text.Format("progress.starting", target.FriendlyName));
+        Report(OperationEventKind.Step, Text.Format("progress.starting", target.FriendlyName), OperationStep.Starting, target);
         var session = new Session(target);
         var startAttempts = 0;
         var recoveredSinceLastStart = false;
@@ -249,7 +249,9 @@ public sealed class ServiceControl
 
         Report(
             OperationEventKind.Warning,
-            Text.Format("progress.notResponding", target.FriendlyName, WholeSeconds(stalled), processId));
+            Text.Format("progress.notResponding", target.FriendlyName, WholeSeconds(stalled), processId),
+            OperationStep.NotResponding,
+            target);
 
         var termination = _services.TerminateHungServiceHost(
             target.ServiceName,
@@ -263,7 +265,9 @@ public sealed class ServiceControl
                 session.RecoveryNote = Text.Format("service.recovered", target.FriendlyName, processId);
                 Report(
                     OperationEventKind.Success,
-                    Text.Format("progress.terminated", target.FriendlyName, processId));
+                    Text.Format("progress.terminated", target.FriendlyName, processId),
+                    OperationStep.Terminated,
+                    target);
                 WaitUntilHostExitIsRegistered(target, processId);
                 return null;
 
@@ -375,6 +379,8 @@ public sealed class ServiceControl
                 Report(
                     OperationEventKind.Waiting,
                     Text.Format(waitingKey, service.FriendlyName, WholeSeconds(elapsed)),
+                    WaitingStep(waitingKey),
+                    service,
                     elapsed);
                 nextReportAt = now + _timings.ProgressInterval;
             }
@@ -383,8 +389,20 @@ public sealed class ServiceControl
         }
     }
 
-    private void Report(OperationEventKind kind, string message, TimeSpan? elapsed = null)
-        => _progress?.Report(new OperationEvent(kind, message, elapsed));
+    private void Report(
+        OperationEventKind kind,
+        string message,
+        OperationStep step,
+        TargetService service,
+        TimeSpan? elapsed = null)
+        => _progress?.Report(new OperationEvent(kind, message, elapsed, step, service.FriendlyName));
+
+    private static OperationStep WaitingStep(string waitingKey) => waitingKey switch
+    {
+        "progress.waitingStop" => OperationStep.WaitingStop,
+        "progress.waitingStart" => OperationStep.WaitingStart,
+        _ => OperationStep.WaitingSettle
+    };
 
     private static string QueryFailed(TargetService target, string? error)
         => Text.Format(

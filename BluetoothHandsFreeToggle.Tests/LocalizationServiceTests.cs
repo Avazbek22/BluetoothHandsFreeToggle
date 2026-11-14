@@ -77,12 +77,12 @@ public sealed class LocalizationServiceTests
         var store = new MemoryLanguagePreferenceStore();
         var service = new LocalizationService(store, AppLanguage.Russian);
 
-        Assert.Equal("Сменить язык", service.Get("menu.changeLanguage"));
+        Assert.Equal("Язык", service.Get("gui.settings.language"));
         Assert.Equal("[[missing.key]]", service.Get("missing.key"));
 
         service.SetLanguage(AppLanguage.English);
 
-        Assert.Equal("Change language", service.Get("menu.changeLanguage"));
+        Assert.Equal("Language", service.Get("gui.settings.language"));
         Assert.Equal(AppLanguage.English, store.SavedLanguage);
     }
 

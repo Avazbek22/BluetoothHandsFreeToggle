@@ -17,6 +17,7 @@ internal static class CoreAudioInterop
     public static StrategyBasedComWrappers ComWrappers { get; } = new();
 
     public const int ClsctxAll = 0x17;
+    public const int DataFlowRender = 0;
     public const int DataFlowCapture = 1;
     public const int RoleConsole = 0;
     public const int RoleCommunications = 2;

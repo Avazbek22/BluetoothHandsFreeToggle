@@ -1,0 +1,12 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="BluetoothHandsFreeToggle.Gui.GuiApp"
+             RequestedThemeVariant="Dark"
+             Name="HandsFree Toggle">
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://BluetoothHandsFreeToggle/Gui/Theme.axaml" />
+    </Application.Styles>
+
+</Application>
