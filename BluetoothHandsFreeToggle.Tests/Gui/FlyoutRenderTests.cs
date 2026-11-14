@@ -113,9 +113,16 @@ public sealed class FlyoutRenderTests
         })
     ];
 
+    public static TheoryData<AppLanguage> Languages()
+    {
+        var languages = new TheoryData<AppLanguage>();
+        foreach (var definition in AppLanguageCatalog.All)
+            languages.Add(definition.Language);
+        return languages;
+    }
+
     [Theory]
-    [InlineData(AppLanguage.English)]
-    [InlineData(AppLanguage.Russian)]
+    [MemberData(nameof(Languages))]
     public Task EveryStateRendersWithoutClippedText(AppLanguage language) => Ui.RunAsync(async () =>
     {
         Text.SetLanguage(language);
