@@ -11,6 +11,10 @@
         <!-- Required by the source-generated (trim- and AOT-safe) COM interop for Core Audio. -->
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <!-- Publishing drops unused framework code: a smaller exe and about a quarter of the memory.
+             The trim analyzer turns any reflection-only code into a build error. -->
+        <PublishTrimmed>true</PublishTrimmed>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
 
         <AssemblyName>StereoKeeper</AssemblyName>
         <RootNamespace>StereoKeeper</RootNamespace>
