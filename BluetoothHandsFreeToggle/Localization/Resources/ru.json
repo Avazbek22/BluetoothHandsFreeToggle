@@ -181,6 +181,8 @@
   "gui.error.statusTimeout": "Windows не ответила на проверку вовремя.",
   "gui.error.startup.title": "HandsFree Toggle не удалось запустить",
   "gui.error.startup.body": "Не удалось показать панель в трее: {0}\n\nПодробности сохранены в {1}",
+  "gui.error.startup.restoreOffer": "Включено «Всегда стерео», поэтому микрофон наушников выключен. Вернуть всё как было? Windows попросит разрешение.",
+  "gui.error.startup.restored": "Готово: Windows настроена так же, как без программы. Микрофон наушников снова работает.",
   "gui.steps.title": "Что происходит",
   "gui.step.part": "{0} ({1} из {2})",
   "gui.step.stop": "Сбрасываю режим звонка",

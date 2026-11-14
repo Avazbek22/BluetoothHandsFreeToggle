@@ -2,7 +2,9 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using BluetoothHandsFreeToggle.App;
+using BluetoothHandsFreeToggle.Core;
 using BluetoothHandsFreeToggle.Gui;
+using BluetoothHandsFreeToggle.Gui.Services;
 using BluetoothHandsFreeToggle.Localization;
 
 namespace BluetoothHandsFreeToggle;
@@ -66,20 +68,25 @@ internal static class Program
 
     private static void ShowStartupError(Exception exception)
     {
-        string title;
-        string body;
         try
         {
-            title = Text.Get("gui.error.startup.title");
-            body = Text.Format("gui.error.startup.body", exception.Message, CrashLog.FilePath);
-        }
-        catch (Exception textFailure) when (textFailure is not OutOfMemoryException)
-        {
-            title = "HandsFree Toggle could not start";
-            body = $"{exception.Message}\n\n{CrashLog.FilePath}";
-        }
+            var engine = new ToggleEngine();
+            IOperationRunner runner = AdminHelper.IsAdministrator()
+                ? new InProcessOperationRunner(engine)
+                : new ElevatedOperationRunner(Environment.ProcessPath ?? AppInfo.AppName + ".exe");
 
-        _ = MessageBoxW(IntPtr.Zero, body, title, MbOk | MbIconError | MbSetForeground);
+            new StartupRecovery(new MessageBoxDialog(), runner, engine.GetServiceSnapshots)
+                .Report(exception, CrashLog.FilePath);
+        }
+        catch (Exception failure) when (failure is not OutOfMemoryException)
+        {
+            CrashLog.Write("The startup error could not be explained", failure);
+            _ = MessageBoxW(
+                IntPtr.Zero,
+                $"{exception.Message}\n\n{CrashLog.FilePath}",
+                "HandsFree Toggle could not start",
+                MbOk | MbIconError | MbSetForeground);
+        }
     }
 
     private static void InitializeLanguage()
@@ -90,10 +97,28 @@ internal static class Program
     }
 
     private const uint MbOk = 0x0;
+    private const uint MbYesNo = 0x4;
     private const uint MbIconError = 0x10;
+    private const uint MbIconWarning = 0x30;
+    private const uint MbIconInformation = 0x40;
     private const uint MbSetForeground = 0x10000;
+    private const int IdYes = 6;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int MessageBoxW(IntPtr owner, string text, string caption, uint type);
+
+    private sealed class MessageBoxDialog : IStartupDialog
+    {
+        public void Show(string title, string body, StartupDialogIcon icon)
+            => _ = MessageBoxW(IntPtr.Zero, body, title, MbOk | MbSetForeground | icon switch
+            {
+                StartupDialogIcon.Warning => MbIconWarning,
+                StartupDialogIcon.Information => MbIconInformation,
+                _ => MbIconError
+            });
+
+        public bool Ask(string title, string body)
+            => MessageBoxW(IntPtr.Zero, body, title, MbYesNo | MbIconWarning | MbSetForeground) == IdYes;
+    }
 }

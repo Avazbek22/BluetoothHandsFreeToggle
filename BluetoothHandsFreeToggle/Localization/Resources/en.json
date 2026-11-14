@@ -181,6 +181,8 @@
   "gui.error.statusTimeout": "Windows did not answer the check in time.",
   "gui.error.startup.title": "HandsFree Toggle could not start",
   "gui.error.startup.body": "The tray panel could not be shown: {0}\n\nDetails were saved to {1}",
+  "gui.error.startup.restoreOffer": "“Always stereo” is on, so the headphone microphone is off. Put everything back as it was? Windows will ask for permission.",
+  "gui.error.startup.restored": "Done: Windows is set up exactly as without the app. The headphone microphone works again.",
   "gui.steps.title": "What is happening",
   "gui.step.part": "{0} ({1} of {2})",
   "gui.step.stop": "Resetting call mode",
